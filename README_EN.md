@@ -194,7 +194,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Roadmap
 
-- [ ] ClashMeta kernel integration
+- [x] ClashMeta kernel integration (process management + API client)
+- [x] Configuration import/export (local files + subscriptions)
 - [ ] System proxy configuration
 - [ ] TUN mode support
 - [ ] WebDAV sync

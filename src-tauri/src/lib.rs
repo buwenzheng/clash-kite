@@ -1,12 +1,12 @@
 mod models;
+mod db;
+mod core;
 mod services;
 mod commands;
-mod utils;
 
-use std::path::Path;
-use services::proxy::ProxyService;
-use services::config::ConfigService;
-use services::node::NodeService;
+use std::path::PathBuf;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use tauri::{
     menu::{Menu, MenuItem},
@@ -14,54 +14,106 @@ use tauri::{
     Manager, Emitter,
 };
 
+fn resolve_mihomo_path(app: &tauri::App) -> PathBuf {
+    let binary_name = if cfg!(target_os = "windows") {
+        "mihomo.exe"
+    } else {
+        "mihomo"
+    };
+
+    // Dev mode: look in src-tauri/resources/sidecar/
+    if cfg!(debug_assertions) {
+        let dev_path = std::env::current_dir()
+            .unwrap_or_default()
+            .join("resources")
+            .join("sidecar")
+            .join(binary_name);
+        if dev_path.exists() {
+            return dev_path;
+        }
+    }
+
+    // Production: look in the bundled resource dir
+    app.path()
+        .resource_dir()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join("sidecar")
+        .join(binary_name)
+}
+
+fn resolve_files_dir(app: &tauri::App) -> PathBuf {
+    if cfg!(debug_assertions) {
+        let dev_path = std::env::current_dir()
+            .unwrap_or_default()
+            .join("resources")
+            .join("files");
+        if dev_path.exists() {
+            return dev_path;
+        }
+    }
+    app.path()
+        .resource_dir()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join("files")
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // 初始化日志
     env_logger::init();
-
-    // 获取配置目录
-    let config_dir = dirs::config_dir()
-        .unwrap_or_else(|| Path::new(".").to_path_buf())
-        .join("clash-kite");
-
-    // 创建服务实例
-    let proxy_service = ProxyService::new();
-    let config_service = ConfigService::new(&config_dir);
-    let node_service = NodeService::new();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .manage(proxy_service)
-        .manage(config_service)
-        .manage(node_service)
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
-            // 创建托盘菜单
+            // Paths
+            let config_dir = dirs::config_dir()
+                .unwrap_or_else(|| PathBuf::from("."))
+                .join("clash-kite");
+            std::fs::create_dir_all(&config_dir)?;
+
+            let db_path = config_dir.join("data.db");
+            let conn = db::init(&db_path)?;
+            let db = Arc::new(Mutex::new(conn));
+
+            // Services
+            let mihomo_path = resolve_mihomo_path(app);
+            let files_dir = resolve_files_dir(app);
+            log::info!("mihomo binary: {:?}", mihomo_path);
+            log::info!("data files dir: {:?}", files_dir);
+
+            let mihomo = Arc::new(core::mihomo::MihomoManager::new(mihomo_path));
+            let profile_svc = services::profile::ProfileService::new(config_dir.clone(), db.clone());
+            let proxy_svc = services::proxy::ProxyService::new(mihomo.clone());
+            let settings_svc = services::settings::SettingsService::new(db.clone());
+
+            app.manage(profile_svc);
+            app.manage(proxy_svc);
+            app.manage(settings_svc);
+
+            // System tray
             let show_i = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
             let hide_i = MenuItem::with_id(app, "hide", "Hide", true, None::<&str>)?;
-            let toggle_proxy_i = MenuItem::with_id(app, "toggle_proxy", "Toggle Proxy", true, None::<&str>)?;
+            let toggle_i = MenuItem::with_id(app, "toggle_proxy", "Toggle Proxy", true, None::<&str>)?;
             let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show_i, &hide_i, &toggle_i, &quit_i])?;
 
-            let menu = Menu::with_items(app, &[&show_i, &hide_i, &toggle_proxy_i, &quit_i])?;
-
-            // 创建系统托盘
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
                 .tooltip("Clash Kite")
                 .on_menu_event(|app, event| match event.id().as_ref() {
                     "show" => {
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.show();
+                            let _ = w.set_focus();
                         }
                     }
                     "hide" => {
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.hide();
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.hide();
                         }
                     }
                     "toggle_proxy" => {
-                        // 触发代理切换
                         let _ = app.emit("toggle-proxy", ());
                     }
                     "quit" => {
@@ -75,54 +127,35 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                // 隐藏窗口而不是关闭
-                window.hide().unwrap();
+                let _ = window.hide();
                 api.prevent_close();
             }
         })
         .invoke_handler(tauri::generate_handler![
-            // 代理相关命令
-            commands::proxy::get_proxy_info,
-            commands::proxy::get_proxy_config,
-            commands::proxy::update_proxy_config,
+            // Proxy
+            commands::proxy::get_proxy_status,
             commands::proxy::start_proxy,
             commands::proxy::stop_proxy,
-            commands::proxy::restart_proxy,
             commands::proxy::toggle_proxy,
+            commands::proxy::get_proxy_groups,
+            commands::proxy::select_proxy,
+            commands::proxy::test_proxy_delay,
             commands::proxy::set_proxy_mode,
-            commands::proxy::select_proxy_node,
-            commands::proxy::get_proxy_traffic,
-            commands::proxy::check_proxy_status,
-            
-            // 配置相关命令
-            commands::config::get_current_config,
-            commands::config::get_all_configs,
-            commands::config::import_config_from_file,
-            commands::config::import_config_from_subscription,
-            commands::config::update_subscription,
-            commands::config::delete_config,
-            commands::config::export_config,
-            commands::config::read_config_content,
-            commands::config::save_config_content,
-            commands::config::load_all_configs,
-            commands::config::set_current_config,
-            
-            // 节点相关命令
-            commands::node::get_node_groups,
-            commands::node::get_node_group,
-            commands::node::get_all_nodes,
-            commands::node::get_node,
-            commands::node::search_nodes,
-            commands::node::sort_nodes_by_latency,
-            commands::node::test_node_latency,
-            commands::node::test_all_nodes_latency,
-            commands::node::add_node_group,
-            commands::node::update_node_group,
-            commands::node::delete_node_group,
-
-            // 窗口相关命令
-            commands::window::show_window,
-            commands::window::hide_window,
+            commands::proxy::set_system_proxy,
+            commands::proxy::get_traffic,
+            // Profile
+            commands::profile::get_profiles,
+            commands::profile::get_active_profile,
+            commands::profile::import_profile_file,
+            commands::profile::import_profile_subscription,
+            commands::profile::update_profile_subscription,
+            commands::profile::delete_profile,
+            commands::profile::activate_profile,
+            commands::profile::read_profile_content,
+            commands::profile::save_profile_content,
+            // Settings
+            commands::settings::get_settings,
+            commands::settings::save_settings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

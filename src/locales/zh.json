@@ -26,6 +26,9 @@
     "stopped": "已停止",
     "toggleProxy": "切换代理",
     "mode": "模式",
+    "rule": "规则",
+    "global": "全局",
+    "direct": "直连",
     "upload": "上传",
     "download": "下载",
     "currentNode": "当前节点",
@@ -34,11 +37,13 @@
     "socksPort": "SOCKS5端口",
     "mixedPort": "混合端口",
     "startedAt": "启动时间",
-    "totalTraffic": "总流量"
+    "totalTraffic": "总流量",
+    "noActiveProfile": "暂无激活的配置文件。请前往配置页面导入并激活一个配置。"
   },
   "nodes": {
     "title": "节点",
     "testAll": "测试全部",
+    "refresh": "刷新",
     "searchPlaceholder": "搜索节点...",
     "all": "全部",
     "select": "选择",
@@ -46,15 +51,19 @@
     "latency": "延迟",
     "testing": "测试中...",
     "unavailable": "不可用",
-    "noNodes": "暂无节点"
+    "noNodes": "暂无节点",
+    "proxyNotRunning": "代理未运行，请先在仪表盘启动代理。"
   },
   "profiles": {
     "title": "配置",
+    "importLocalFile": "从本地文件导入",
+    "importLocalFileDesc": "从本地YAML文件导入配置",
     "importSubscription": "导入订阅",
     "importSubscriptionDesc": "添加新的订阅链接以导入代理配置",
     "profileName": "配置名称",
     "subscriptionUrl": "订阅链接",
     "import": "导入",
+    "selectFile": "选择文件",
     "configurations": "配置列表",
     "configurationsDesc": "管理您的代理配置",
     "active": "当前使用",

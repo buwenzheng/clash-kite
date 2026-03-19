@@ -1,105 +1,107 @@
 use tauri::State;
 use crate::services::proxy::ProxyService;
-use crate::models::proxy::{ProxyConfig, ProxyInfo, ProxyMode};
+use crate::services::profile::ProfileService;
+use crate::models::proxy::*;
 
-/// 获取代理信息
 #[tauri::command]
-pub async fn get_proxy_info(
-    proxy_service: State<'_, ProxyService>,
-) -> Result<ProxyInfo, String> {
-    Ok(proxy_service.get_info().await)
+pub async fn get_proxy_status(
+    proxy: State<'_, ProxyService>,
+) -> Result<ProxyStatus, String> {
+    Ok(proxy.get_status().await)
 }
 
-/// 获取代理配置
-#[tauri::command]
-pub async fn get_proxy_config(
-    proxy_service: State<'_, ProxyService>,
-) -> Result<ProxyConfig, String> {
-    Ok(proxy_service.get_config().await)
-}
-
-/// 更新代理配置
-#[tauri::command]
-pub async fn update_proxy_config(
-    proxy_service: State<'_, ProxyService>,
-    config: ProxyConfig,
-) -> Result<(), String> {
-    proxy_service.update_config(config).await.map_err(|e| e.to_string())
-}
-
-/// 启动代理
 #[tauri::command]
 pub async fn start_proxy(
-    proxy_service: State<'_, ProxyService>,
-) -> Result<(), String> {
-    proxy_service.start().await.map_err(|e| e.to_string())
+    proxy: State<'_, ProxyService>,
+    profile_svc: State<'_, ProfileService>,
+) -> Result<ProxyStatus, String> {
+    let active = profile_svc
+        .get_active()
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "No active profile. Please activate a profile first.".to_string())?;
+
+    proxy
+        .start(&active.file_path, &active.name)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(proxy.get_status().await)
 }
 
-/// 停止代理
 #[tauri::command]
 pub async fn stop_proxy(
-    proxy_service: State<'_, ProxyService>,
-) -> Result<(), String> {
-    proxy_service.stop().await.map_err(|e| e.to_string())
+    proxy: State<'_, ProxyService>,
+) -> Result<ProxyStatus, String> {
+    proxy.stop().await.map_err(|e| e.to_string())?;
+    Ok(proxy.get_status().await)
 }
 
-/// 重启代理
-#[tauri::command]
-pub async fn restart_proxy(
-    proxy_service: State<'_, ProxyService>,
-) -> Result<(), String> {
-    proxy_service.restart().await.map_err(|e| e.to_string())
-}
-
-/// 切换代理开关
 #[tauri::command]
 pub async fn toggle_proxy(
-    proxy_service: State<'_, ProxyService>,
-) -> Result<(), String> {
-    proxy_service.toggle().await.map_err(|e| e.to_string())
+    proxy: State<'_, ProxyService>,
+    profile_svc: State<'_, ProfileService>,
+) -> Result<ProxyStatus, String> {
+    if proxy.is_running().await {
+        proxy.stop().await.map_err(|e| e.to_string())?;
+    } else {
+        let active = profile_svc
+            .get_active()
+            .await
+            .map_err(|e| e.to_string())?
+            .ok_or_else(|| "No active profile".to_string())?;
+        proxy
+            .start(&active.file_path, &active.name)
+            .await
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(proxy.get_status().await)
 }
 
-/// 设置代理模式
+#[tauri::command]
+pub async fn get_proxy_groups(
+    proxy: State<'_, ProxyService>,
+) -> Result<Vec<ProxyGroup>, String> {
+    proxy.get_groups().await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn select_proxy(
+    proxy: State<'_, ProxyService>,
+    group: String,
+    name: String,
+) -> Result<(), String> {
+    proxy.select_proxy(&group, &name).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn test_proxy_delay(
+    proxy: State<'_, ProxyService>,
+    name: String,
+) -> Result<DelayResult, String> {
+    proxy.test_delay(&name).await.map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub async fn set_proxy_mode(
-    proxy_service: State<'_, ProxyService>,
+    proxy: State<'_, ProxyService>,
     mode: String,
 ) -> Result<(), String> {
-    let proxy_mode = match mode.as_str() {
-        "direct" => ProxyMode::Direct,
-        "global" => ProxyMode::Global,
-        "rule" => ProxyMode::Rule,
-        _ => return Err(format!("Invalid proxy mode: {}", mode)),
-    };
-    proxy_service.set_mode(proxy_mode).await.map_err(|e| e.to_string())
+    let m = ProxyMode::from_str(&mode);
+    proxy.set_mode(m).await.map_err(|e| e.to_string())
 }
 
-/// 选择节点
 #[tauri::command]
-pub async fn select_proxy_node(
-    proxy_service: State<'_, ProxyService>,
-    node_id: String,
+pub async fn set_system_proxy(
+    proxy: State<'_, ProxyService>,
+    enable: bool,
 ) -> Result<(), String> {
-    proxy_service.select_node(&node_id).await.map_err(|e| e.to_string())
+    proxy.set_system_proxy(enable).await.map_err(|e| e.to_string())
 }
 
-/// 获取流量统计
 #[tauri::command]
-pub async fn get_proxy_traffic(
-    proxy_service: State<'_, ProxyService>,
-) -> Result<(u64, u64), String> {
-    proxy_service.get_traffic().await.map_err(|e| e.to_string())
-}
-
-/// 检查代理状态
-#[tauri::command]
-pub async fn check_proxy_status(
-    proxy_service: State<'_, ProxyService>,
-) -> Result<String, String> {
-    let status = proxy_service.check_status().await.map_err(|e| e.to_string())?;
-    Ok(match status {
-        crate::models::proxy::ProxyStatus::Stopped => "stopped".to_string(),
-        crate::models::proxy::ProxyStatus::Running => "running".to_string(),
-        crate::models::proxy::ProxyStatus::Error(msg) => format!("error: {}", msg),
-    })
+pub async fn get_traffic(
+    proxy: State<'_, ProxyService>,
+) -> Result<TrafficData, String> {
+    proxy.get_traffic().await.map_err(|e| e.to_string())
 }

@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Trash2, RefreshCw, FileText } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  RefreshCw,
+  FileText,
+  FolderOpen,
+  Check,
+  Link,
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -12,117 +20,166 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useConfigStore } from "@/store";
+import { useProfileStore, useProxyStore } from "@/store";
 import { cn } from "@/lib/utils";
+import { openConfigFile } from "@/api";
 
 export default function Profiles() {
   const { t } = useTranslation();
   const {
-    currentConfig,
-    configs,
+    profiles,
     loading,
-    fetchCurrentConfig,
-    fetchAllConfigs,
-    importFromSubscription,
+    error,
+    fetchProfiles,
+    importFile,
+    importSubscription,
     updateSubscription,
-    deleteConfig,
-    setCurrentConfig,
-  } = useConfigStore();
+    deleteProfile,
+    activateProfile,
+  } = useProfileStore();
+  const { fetchStatus, fetchGroups, status } = useProxyStore();
 
-  const [subscriptionUrl, setSubscriptionUrl] = useState("");
-  const [subscriptionName, setSubscriptionName] = useState("");
+  const [subUrl, setSubUrl] = useState("");
+  const [subName, setSubName] = useState("");
+  const [localName, setLocalName] = useState("");
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchCurrentConfig();
-    fetchAllConfigs();
-  }, [fetchCurrentConfig, fetchAllConfigs]);
+    fetchProfiles();
+  }, [fetchProfiles]);
+
+  const handleImportFile = async () => {
+    if (!localName.trim()) return;
+    try {
+      const filePath = await openConfigFile();
+      if (filePath) {
+        await importFile(filePath, localName);
+        setLocalName("");
+      }
+    } catch (err) {
+      console.error("Import failed:", err);
+    }
+  };
 
   const handleImportSubscription = async () => {
-    if (!subscriptionUrl.trim() || !subscriptionName.trim()) return;
-
+    if (!subUrl.trim() || !subName.trim()) return;
     try {
-      await importFromSubscription(subscriptionUrl, subscriptionName);
-      setSubscriptionUrl("");
-      setSubscriptionName("");
-    } catch (error) {
-      console.error("Failed to import subscription:", error);
+      await importSubscription(subUrl, subName);
+      setSubUrl("");
+      setSubName("");
+    } catch (err) {
+      console.error("Subscription import failed:", err);
     }
   };
 
-  const handleUpdateSubscription = async (configId: string) => {
+  const handleUpdate = async (id: string) => {
+    setUpdatingId(id);
     try {
-      await updateSubscription(configId);
-    } catch (error) {
-      console.error("Failed to update subscription:", error);
+      await updateSubscription(id);
+    } finally {
+      setUpdatingId(null);
     }
   };
 
-  const handleDeleteConfig = async (configId: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm(t("profiles.deleteConfirm"))) {
-      try {
-        await deleteConfig(configId);
-      } catch (error) {
-        console.error("Failed to delete config:", error);
-      }
+      await deleteProfile(id);
     }
   };
 
-  const handleSelectConfig = async (config: (typeof configs)[0]) => {
+  const handleActivate = async (id: string) => {
+    await activateProfile(id);
+    // Refresh proxy status after activation
+    await fetchStatus();
+    if (status?.running) {
+      await fetchGroups();
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
     try {
-      await setCurrentConfig(config);
-    } catch (error) {
-      console.error("Failed to select config:", error);
+      return new Date(dateStr).toLocaleString();
+    } catch {
+      return dateStr;
     }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">{t("profiles.title")}</h1>
-      </div>
+      <h1 className="text-3xl font-bold">{t("profiles.title")}</h1>
+
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+          {error}
+        </div>
+      )}
+
+      {/* Import Local File */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FolderOpen className="h-5 w-5" />
+            {t("profiles.importLocalFile")}
+          </CardTitle>
+          <CardDescription>{t("profiles.importLocalFileDesc")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-3">
+            <Input
+              placeholder={t("profiles.profileName")}
+              value={localName}
+              onChange={(e) => setLocalName(e.target.value)}
+              className="w-48"
+            />
+            <Button
+              onClick={handleImportFile}
+              disabled={loading || !localName.trim()}
+              className="flex-1"
+            >
+              <FolderOpen className="mr-2 h-4 w-4" />
+              {t("profiles.selectFile")}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Import Subscription */}
       <Card>
         <CardHeader>
-          <CardTitle>{t("profiles.importSubscription")}</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Link className="h-5 w-5" />
+            {t("profiles.importSubscription")}
+          </CardTitle>
           <CardDescription>
             {t("profiles.importSubscriptionDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col space-y-4">
-            <div className="flex space-x-4">
-              <Input
-                placeholder={t("profiles.profileName")}
-                value={subscriptionName}
-                onChange={(e) => setSubscriptionName(e.target.value)}
-                className="w-1/4"
-              />
-              <Input
-                placeholder={t("profiles.subscriptionUrl")}
-                value={subscriptionUrl}
-                onChange={(e) => setSubscriptionUrl(e.target.value)}
-                className="flex-1"
-              />
-              <Button
-                onClick={handleImportSubscription}
-                disabled={
-                  loading || !subscriptionUrl.trim() || !subscriptionName.trim()
-                }
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                {t("profiles.import")}
-              </Button>
-            </div>
+          <div className="flex gap-3">
+            <Input
+              placeholder={t("profiles.profileName")}
+              value={subName}
+              onChange={(e) => setSubName(e.target.value)}
+              className="w-48"
+            />
+            <Input
+              placeholder={t("profiles.subscriptionUrl")}
+              value={subUrl}
+              onChange={(e) => setSubUrl(e.target.value)}
+              className="flex-1"
+            />
+            <Button
+              onClick={handleImportSubscription}
+              disabled={loading || !subUrl.trim() || !subName.trim()}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {t("profiles.import")}
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Config List */}
+      {/* Profile List */}
       <Card>
         <CardHeader>
           <CardTitle>{t("profiles.configurations")}</CardTitle>
@@ -130,70 +187,71 @@ export default function Profiles() {
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[400px]">
-            <div className="space-y-4">
-              {configs.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+            <div className="space-y-3">
+              {profiles.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
                   {t("profiles.noConfigs")}
                 </div>
               ) : (
-                configs.map((config) => (
+                profiles.map((profile) => (
                   <div
-                    key={config.id}
+                    key={profile.id}
                     className={cn(
-                      "flex items-center justify-between p-4 rounded-lg border",
-                      currentConfig?.id === config.id &&
-                        "border-primary bg-primary/5",
+                      "flex items-center justify-between p-4 rounded-lg border transition-colors",
+                      profile.isActive && "border-primary bg-primary/5",
                     )}
                   >
-                    <div className="flex items-center space-x-4">
-                      <FileText className="h-8 w-8 text-muted-foreground" />
-                      <div className="flex flex-col">
-                        <span className="font-medium">{config.name}</span>
-                        <span className="text-sm text-muted-foreground">
-                          {config.source === "Subscription"
+                    <div className="flex items-center gap-4 min-w-0">
+                      <FileText className="h-8 w-8 text-muted-foreground shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{profile.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {profile.source === "subscription"
                             ? t("profiles.subscription")
                             : t("profiles.localFile")}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {t("profiles.updatedAt")}:{" "}
-                          {formatDate(config.updatedAt)}
-                        </span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {t("profiles.updatedAt")}: {formatDate(profile.updatedAt)}
+                        </p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      {currentConfig?.id === config.id && (
-                        <Badge variant="success">{t("profiles.active")}</Badge>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {profile.isActive && (
+                        <Badge>{t("profiles.active")}</Badge>
                       )}
-                      {config.source === "Subscription" && (
+                      {profile.source === "subscription" && (
                         <Button
                           variant="outline"
-                          size="sm"
-                          onClick={() => handleUpdateSubscription(config.id)}
-                          disabled={loading}
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleUpdate(profile.id)}
+                          disabled={updatingId === profile.id}
                         >
                           <RefreshCw
-                            className={cn("h-4 w-4", loading && "animate-spin")}
+                            className={cn(
+                              "h-4 w-4",
+                              updatingId === profile.id && "animate-spin",
+                            )}
                           />
                         </Button>
                       )}
                       <Button
-                        variant={
-                          currentConfig?.id === config.id
-                            ? "default"
-                            : "outline"
-                        }
+                        variant={profile.isActive ? "default" : "outline"}
                         size="sm"
-                        onClick={() => handleSelectConfig(config)}
-                        disabled={loading}
+                        onClick={() => handleActivate(profile.id)}
+                        disabled={loading || profile.isActive}
                       >
-                        {currentConfig?.id === config.id
-                          ? t("profiles.active")
-                          : t("profiles.use")}
+                        {profile.isActive ? (
+                          <Check className="h-4 w-4" />
+                        ) : (
+                          t("profiles.use")
+                        )}
                       </Button>
                       <Button
                         variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteConfig(config.id)}
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleDelete(profile.id)}
                         disabled={loading}
                       >
                         <Trash2 className="h-4 w-4" />

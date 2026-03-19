@@ -194,7 +194,8 @@ npm run tauri build
 
 ## 路线图
 
-- [ ] ClashMeta 内核集成
+- [x] ClashMeta 内核集成（进程管理 + API客户端）
+- [x] 配置文件导入/导出（本地文件 + 订阅）
 - [ ] 系统代理配置
 - [ ] TUN 模式支持
 - [ ] WebDAV 同步

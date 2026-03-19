@@ -10,11 +10,14 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
-        "title": "clash-kite-app",
-        "width": 800,
-        "height": 600
+        "title": "Clash Kite",
+        "width": 960,
+        "height": 680,
+        "minWidth": 800,
+        "minHeight": 600
       }
     ],
     "security": {
@@ -30,6 +33,10 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "resources": {
+      "resources/sidecar/mihomo*": "./sidecar/",
+      "resources/files/*": "./files/"
+    }
   }
 }

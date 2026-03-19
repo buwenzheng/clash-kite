@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Downloaded sidecar binaries and geo data (managed by scripts/prepare.mjs)
+src-tauri/resources/sidecar/
+src-tauri/resources/files/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

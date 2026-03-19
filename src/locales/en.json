@@ -26,6 +26,9 @@
     "stopped": "Stopped",
     "toggleProxy": "Toggle Proxy",
     "mode": "Mode",
+    "rule": "Rule",
+    "global": "Global",
+    "direct": "Direct",
     "upload": "Upload",
     "download": "Download",
     "currentNode": "Current Node",
@@ -34,11 +37,13 @@
     "socksPort": "SOCKS5 Port",
     "mixedPort": "Mixed Port",
     "startedAt": "Started at",
-    "totalTraffic": "Total traffic"
+    "totalTraffic": "Total traffic",
+    "noActiveProfile": "No active profile. Go to Profiles to import and activate one."
   },
   "nodes": {
     "title": "Nodes",
     "testAll": "Test All",
+    "refresh": "Refresh",
     "searchPlaceholder": "Search nodes...",
     "all": "All",
     "select": "Select",
@@ -46,15 +51,19 @@
     "latency": "Latency",
     "testing": "Testing...",
     "unavailable": "Unavailable",
-    "noNodes": "No nodes available"
+    "noNodes": "No nodes available",
+    "proxyNotRunning": "Proxy is not running. Start the proxy from Dashboard first."
   },
   "profiles": {
     "title": "Profiles",
+    "importLocalFile": "Import from Local File",
+    "importLocalFileDesc": "Import configuration from a local YAML file",
     "importSubscription": "Import Subscription",
     "importSubscriptionDesc": "Add a new subscription URL to import proxy configurations",
     "profileName": "Profile name",
     "subscriptionUrl": "Subscription URL",
     "import": "Import",
+    "selectFile": "Select File",
     "configurations": "Configurations",
     "configurationsDesc": "Manage your proxy configurations",
     "active": "Active",

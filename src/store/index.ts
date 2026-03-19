@@ -1,3 +1,3 @@
 export { useProxyStore } from "./proxy";
-export { useNodeStore } from "./node";
-export { useConfigStore } from "./config";
+export { useProfileStore } from "./config";
+export { useSettingsStore } from "./settings";
