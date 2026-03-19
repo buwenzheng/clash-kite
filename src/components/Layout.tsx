@@ -1,5 +1,5 @@
-import React from "react";
 import { NavLink, Outlet } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   LayoutDashboard,
   Globe,
@@ -10,20 +10,22 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 interface LayoutProps {
   children?: React.ReactNode;
 }
 
-const navItems = [
-  { path: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { path: "/nodes", icon: Globe, label: "Nodes" },
-  { path: "/profiles", icon: FileCode, label: "Profiles" },
-  { path: "/settings", icon: Settings, label: "Settings" },
-];
-
 export function Layout({ children }: LayoutProps) {
-  const [isDark, setIsDark] = React.useState(false);
+  const { t } = useTranslation();
+  const [isDark, setIsDark] = useState(false);
+
+  const navItems = [
+    { path: "/", icon: LayoutDashboard, label: t("nav.dashboard") },
+    { path: "/nodes", icon: Globe, label: t("nav.nodes") },
+    { path: "/profiles", icon: FileCode, label: t("nav.profiles") },
+    { path: "/settings", icon: Settings, label: t("nav.settings") },
+  ];
 
   const toggleTheme = () => {
     setIsDark(!isDark);

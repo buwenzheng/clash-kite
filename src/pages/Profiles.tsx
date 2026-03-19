@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus, Trash2, RefreshCw, FileText } from "lucide-react";
 import {
   Card,
@@ -15,6 +16,7 @@ import { useConfigStore } from "@/store";
 import { cn } from "@/lib/utils";
 
 export default function Profiles() {
+  const { t } = useTranslation();
   const {
     currentConfig,
     configs,
@@ -56,7 +58,7 @@ export default function Profiles() {
   };
 
   const handleDeleteConfig = async (configId: string) => {
-    if (confirm("Are you sure you want to delete this configuration?")) {
+    if (confirm(t("profiles.deleteConfirm"))) {
       try {
         await deleteConfig(configId);
       } catch (error) {
@@ -80,28 +82,28 @@ export default function Profiles() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Profiles</h1>
+        <h1 className="text-3xl font-bold">{t("profiles.title")}</h1>
       </div>
 
       {/* Import Subscription */}
       <Card>
         <CardHeader>
-          <CardTitle>Import Subscription</CardTitle>
+          <CardTitle>{t("profiles.importSubscription")}</CardTitle>
           <CardDescription>
-            Add a new subscription URL to import proxy configurations
+            {t("profiles.importSubscriptionDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col space-y-4">
             <div className="flex space-x-4">
               <Input
-                placeholder="Profile name"
+                placeholder={t("profiles.profileName")}
                 value={subscriptionName}
                 onChange={(e) => setSubscriptionName(e.target.value)}
                 className="w-1/4"
               />
               <Input
-                placeholder="Subscription URL"
+                placeholder={t("profiles.subscriptionUrl")}
                 value={subscriptionUrl}
                 onChange={(e) => setSubscriptionUrl(e.target.value)}
                 className="flex-1"
@@ -113,7 +115,7 @@ export default function Profiles() {
                 }
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Import
+                {t("profiles.import")}
               </Button>
             </div>
           </div>
@@ -123,15 +125,15 @@ export default function Profiles() {
       {/* Config List */}
       <Card>
         <CardHeader>
-          <CardTitle>Configurations</CardTitle>
-          <CardDescription>Manage your proxy configurations</CardDescription>
+          <CardTitle>{t("profiles.configurations")}</CardTitle>
+          <CardDescription>{t("profiles.configurationsDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[400px]">
             <div className="space-y-4">
               {configs.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  No configurations yet. Import a subscription to get started.
+                  {t("profiles.noConfigs")}
                 </div>
               ) : (
                 configs.map((config) => (
@@ -149,17 +151,18 @@ export default function Profiles() {
                         <span className="font-medium">{config.name}</span>
                         <span className="text-sm text-muted-foreground">
                           {config.source === "Subscription"
-                            ? "Subscription"
-                            : "Local File"}
+                            ? t("profiles.subscription")
+                            : t("profiles.localFile")}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          Updated: {formatDate(config.updatedAt)}
+                          {t("profiles.updatedAt")}:{" "}
+                          {formatDate(config.updatedAt)}
                         </span>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       {currentConfig?.id === config.id && (
-                        <Badge variant="success">Active</Badge>
+                        <Badge variant="success">{t("profiles.active")}</Badge>
                       )}
                       {config.source === "Subscription" && (
                         <Button
@@ -183,7 +186,9 @@ export default function Profiles() {
                         onClick={() => handleSelectConfig(config)}
                         disabled={loading}
                       >
-                        {currentConfig?.id === config.id ? "Active" : "Use"}
+                        {currentConfig?.id === config.id
+                          ? t("profiles.active")
+                          : t("profiles.use")}
                       </Button>
                       <Button
                         variant="destructive"

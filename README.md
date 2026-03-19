@@ -1,207 +1,212 @@
 # Clash-Kite
 
-A modern, cross-platform proxy client based on ClashMeta, built with Tauri + React + TypeScript + Rust.
+一款基于 ClashMeta 内核的现代化跨平台代理客户端，使用 Tauri + React + TypeScript + Rust 构建。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS-lightgrey.svg)]()
 
-## Features
+[English](./README_EN.md) | 中文
 
-- 🚀 **Cross-platform**: Native support for Windows and macOS
-- 🎨 **Modern UI**: Built with Shadcn/ui and Tailwind CSS
-- ⚡ **High Performance**: Rust backend with Tauri framework
-- 🔒 **Privacy First**: No telemetry, no ads, open source
-- 🌙 **Dark Mode**: Beautiful dark and light themes
-- 📡 **Subscription Support**: Import and manage proxy subscriptions
-- 🔄 **Auto Update**: Automatic subscription updates
-- 📊 **Node Testing**: Latency testing for all nodes
+## 功能特性
 
-## Tech Stack
+- 🚀 **跨平台**：原生支持 Windows 和 macOS
+- 🎨 **现代UI**：基于 Shadcn/ui 和 Tailwind CSS 构建
+- ⚡ **高性能**：Rust 后端 + Tauri 框架
+- 🔒 **隐私优先**：无遥测、无广告、开源免费
+- 🌙 **深色模式**：支持深色/浅色/跟随系统主题
+- 🌍 **多语言**：支持中文和英文
+- 📡 **订阅管理**：导入和管理代理订阅
+- 🔄 **自动更新**：订阅自动更新
+- 📊 **节点测速**：一键测试所有节点延迟
 
-### Frontend
+## 技术栈
 
-- **React 18** - UI framework
-- **TypeScript 5** - Type safety
-- **Vite 5** - Build tool
-- **Tailwind CSS 4** - Utility-first CSS
-- **Shadcn/ui** - UI components
-- **Zustand** - State management
-- **React Router** - Routing
+### 前端
 
-### Backend
+- **React 18** - UI 框架
+- **TypeScript 5** - 类型安全
+- **Vite 5** - 构建工具
+- **Tailwind CSS 4** - 样式框架
+- **Shadcn/ui** - UI 组件库
+- **Zustand** - 状态管理
+- **React Router** - 路由
+- **i18next** - 国际化
 
-- **Rust** - System programming
-- **Tauri 2** - Desktop framework
-- **Serde** - Serialization
-- **Reqwest** - HTTP client
-- **Rusqlite** - SQLite database
+### 后端
 
-### Core
+- **Rust** - 系统编程语言
+- **Tauri 2** - 桌面应用框架
+- **Serde** - 序列化
+- **Reqwest** - HTTP 客户端
+- **Rusqlite** - SQLite 数据库
 
-- **ClashMeta** - Proxy kernel (planned integration)
+### 核心
 
-## Project Structure
+- **ClashMeta** - 代理内核（计划集成）
+
+## 项目结构
 
 ```
 clash-kite/
-├── src/                      # React frontend
-│   ├── api/                  # API calls
-│   ├── components/           # UI components
-│   │   └── ui/              # Shadcn/ui components
-│   ├── hooks/               # Custom hooks
-│   ├── lib/                 # Utilities
-│   ├── pages/               # Page components
-│   │   ├── Dashboard.tsx    # Main dashboard
-│   │   ├── Nodes.tsx        # Node management
-│   │   ├── Profiles.tsx     # Configuration
-│   │   └── Settings.tsx     # Settings
-│   ├── store/               # Zustand stores
-│   └── types/               # TypeScript types
-├── src-tauri/                # Rust backend
+├── src/                          # React 前端
+│   ├── api/                      # API 调用
+│   ├── components/               # UI 组件
+│   │   └── ui/                   # Shadcn/ui 组件
+│   ├── hooks/                    # 自定义 Hooks
+│   ├── lib/                      # 工具函数
+│   ├── locales/                  # 语言文件 (en.json, zh.json)
+│   ├── pages/                    # 页面组件
+│   │   ├── Dashboard.tsx         # 仪表盘
+│   │   ├── Nodes.tsx             # 节点管理
+│   │   ├── Profiles.tsx          # 配置管理
+│   │   └── Settings.tsx          # 设置
+│   ├── store/                    # Zustand 状态
+│   └── types/                    # TypeScript 类型
+├── src-tauri/                    # Rust 后端
 │   └── src/
-│       ├── commands/        # Tauri commands
-│       ├── models/          # Data models
-│       ├── services/        # Business logic
-│       └── utils/           # Utilities
-├── public/                   # Static assets
+│       ├── commands/             # Tauri 命令
+│       ├── models/               # 数据模型
+│       ├── services/             # 业务逻辑
+│       └── utils/                # 工具函数
+├── docs/                         # 文档
 └── package.json
 ```
 
-## Getting Started
+## 快速开始
 
-### Prerequisites
+### 环境要求
 
 - **Node.js** >= 18
 - **Rust** >= 1.70
 - **Visual Studio Build Tools** (Windows)
 
-### Installation
+### 安装
 
-1. Clone the repository:
+1. 克隆仓库：
 
 ```bash
 git clone https://github.com/buwenzheng/clash-kite.git
 cd clash-kite
 ```
 
-2. Install dependencies:
+2. 安装依赖：
 
 ```bash
 npm install
 ```
 
-3. Run development server:
+3. 运行开发服务器：
 
 ```bash
 npm run tauri dev
 ```
 
-### Build
+### 构建
 
-Build for production:
+构建生产版本：
 
 ```bash
 npm run tauri build
 ```
 
-## Development
+## 开发
 
-### Available Scripts
+### 可用脚本
 
-- `npm run dev` - Start Vite dev server
-- `npm run build` - Build frontend
-- `npm run tauri dev` - Start Tauri development
-- `npm run tauri build` - Build desktop application
+- `npm run dev` - 启动 Vite 开发服务器
+- `npm run build` - 构建前端
+- `npm run tauri dev` - 启动 Tauri 开发模式
+- `npm run tauri build` - 构建桌面应用
 
-### Code Structure
+### 代码架构
 
-#### Frontend Architecture
+#### 前端架构
 
-- **Components**: Reusable UI components with Shadcn/ui
-- **Pages**: Route-based page components
-- **Store**: Zustand state management
-- **API**: Tauri command invocations
+- **Components**: 基于 Shadcn/ui 的可复用组件
+- **Pages**: 基于路由的页面组件
+- **Store**: Zustand 状态管理
+- **API**: Tauri 命令调用
 
-#### Backend Architecture
+#### 后端架构
 
-- **Models**: Data structures (Proxy, Config, Node)
-- **Services**: Business logic (ProxyService, ConfigService, NodeService)
-- **Commands**: Tauri command handlers
-- **Utils**: Helper functions
+- **Models**: 数据结构（Proxy、Config、Node）
+- **Services**: 业务逻辑（ProxyService、ConfigService、NodeService）
+- **Commands**: Tauri 命令处理器
+- **Utils**: 辅助函数
 
-## Pages
+## 页面说明
 
-### Dashboard
+### 仪表盘 (Dashboard)
 
-- Proxy toggle switch
-- Real-time status display
-- Traffic statistics
-- Port configuration
+- 代理开关
+- 实时状态显示
+- 流量统计
+- 端口配置
 
-### Nodes
+### 节点 (Nodes)
 
-- Node list with groups
-- Latency testing
-- Node selection
-- Search functionality
+- 节点分组列表
+- 延迟测试
+- 节点选择
+- 搜索功能
 
-### Profiles
+### 配置 (Profiles)
 
-- Subscription import
-- Configuration management
-- Profile switching
+- 订阅导入
+- 配置管理
+- 配置切换
 
-### Settings
+### 设置 (Settings)
 
-- Theme selection (Light/Dark/System)
-- Language settings
-- Auto-start configuration
-- System proxy settings
+- 主题选择（浅色/深色/跟随系统）
+- 语言设置（中文/英文）
+- 开机自启
+- 系统代理设置
 
-## Configuration
+## 配置文件
 
-Configuration files are stored in:
+配置文件存储位置：
 
 - **Windows**: `%APPDATA%/clash-kite/`
 - **macOS**: `~/Library/Application Support/clash-kite/`
 
-## Contributing
+## 参与贡献
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+欢迎贡献代码！请随时提交 Pull Request。
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/amazing-feature`)
+3. 提交更改 (`git commit -m 'Add some amazing feature'`)
+4. 推送到分支 (`git push origin feature/amazing-feature`)
+5. 创建 Pull Request
 
-## License
+## 许可证
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+本项目基于 MIT 许可证开源 - 详见 [LICENSE](LICENSE) 文件。
 
-## Acknowledgments
+## 致谢
 
-- [FlClash](https://github.com/chen08209/FlClash) - Inspiration and reference
-- [Tauri](https://tauri.app) - Desktop framework
-- [Shadcn/ui](https://ui.shadcn.com) - UI components
-- [ClashMeta](https://github.com/MetaCubeX/mihomo) - Proxy kernel
+- [FlClash](https://github.com/chen08209/FlClash) - 灵感来源和参考
+- [Tauri](https://tauri.app) - 桌面应用框架
+- [Shadcn/ui](https://ui.shadcn.com) - UI 组件库
+- [ClashMeta](https://github.com/MetaCubeX/mihomo) - 代理内核
 
-## Roadmap
+## 路线图
 
-- [ ] ClashMeta kernel integration
-- [ ] System proxy configuration
-- [ ] TUN mode support
-- [ ] WebDAV sync
-- [ ] Multi-language support
-- [ ] QR code scanning
-- [ ] Traffic statistics
-- [ ] Rule editor
+- [ ] ClashMeta 内核集成
+- [ ] 系统代理配置
+- [ ] TUN 模式支持
+- [ ] WebDAV 同步
+- [x] 多语言支持（中文、英文）
+- [ ] 二维码扫描
+- [ ] 流量统计
+- [ ] 规则编辑器
 
-## Contact
+## 联系方式
 
 - GitHub: [@buwenzheng](https://github.com/buwenzheng)
-- Repository: [clash-kite](https://github.com/buwenzheng/clash-kite)
+- 仓库: [clash-kite](https://github.com/buwenzheng/clash-kite)
 
 ---
 
-Built with ❤️ using Tauri + React + Rust
+使用 Tauri + React + Rust 构建 ❤️

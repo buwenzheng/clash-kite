@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Search, RefreshCw, Check, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { useNodeStore, useProxyStore } from "@/store";
 import { cn } from "@/lib/utils";
 
 export default function Nodes() {
+  const { t } = useTranslation();
   const {
     groups,
     nodes,
@@ -75,7 +77,7 @@ export default function Nodes() {
   };
 
   const formatLatency = (latency: number | null) => {
-    if (latency === null) return "N/A";
+    if (latency === null) return t("nodes.unavailable");
     return `${latency}ms`;
   };
 
@@ -84,7 +86,7 @@ export default function Nodes() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Nodes</h1>
+        <h1 className="text-3xl font-bold">{t("nodes.title")}</h1>
         <Button
           variant="outline"
           onClick={handleTestAll}
@@ -95,7 +97,7 @@ export default function Nodes() {
           ) : (
             <RefreshCw className="mr-2 h-4 w-4" />
           )}
-          Test All
+          {t("nodes.testAll")}
         </Button>
       </div>
 
@@ -103,7 +105,7 @@ export default function Nodes() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search nodes..."
+          placeholder={t("nodes.searchPlaceholder")}
           value={searchQuery}
           onChange={(e) => handleSearch(e.target.value)}
           className="pl-10"
@@ -113,7 +115,9 @@ export default function Nodes() {
       {/* Node Groups */}
       <Tabs defaultValue={groups[0]?.name || "all"} className="w-full">
         <TabsList>
-          <TabsTrigger value="all">All ({nodes.length})</TabsTrigger>
+          <TabsTrigger value="all">
+            {t("nodes.all")} ({nodes.length})
+          </TabsTrigger>
           {groups.map((group) => (
             <TabsTrigger key={group.name} value={group.name}>
               {group.name} ({group.nodes.length})
@@ -124,84 +128,19 @@ export default function Nodes() {
         <TabsContent value="all">
           <Card>
             <CardHeader>
-              <CardTitle>All Nodes</CardTitle>
+              <CardTitle>
+                {t("nodes.all")} {t("nodes.title")}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[500px]">
                 <div className="space-y-2">
-                  {displayNodes.map((node) => (
-                    <div
-                      key={node.id}
-                      className={cn(
-                        "flex items-center justify-between p-3 rounded-lg border",
-                        info?.config.selectedNode === node.id &&
-                          "border-primary bg-primary/5",
-                      )}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className="flex flex-col">
-                          <span className="font-medium">{node.name}</span>
-                          <span className="text-sm text-muted-foreground">
-                            {node.server}:{node.port}
-                          </span>
-                        </div>
-                        <Badge variant="outline">{node.nodeType}</Badge>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <span
-                          className={cn(
-                            "text-sm font-mono",
-                            getLatencyColor(node.latency),
-                          )}
-                        >
-                          {formatLatency(node.latency)}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleTestNode(node.id)}
-                          disabled={testingNodes.has(node.id)}
-                        >
-                          {testingNodes.has(node.id) ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <RefreshCw className="h-4 w-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant={
-                            info?.config.selectedNode === node.id
-                              ? "default"
-                              : "outline"
-                          }
-                          size="sm"
-                          onClick={() => handleSelectNode(node.id)}
-                        >
-                          {info?.config.selectedNode === node.id ? (
-                            <Check className="h-4 w-4" />
-                          ) : (
-                            "Select"
-                          )}
-                        </Button>
-                      </div>
+                  {displayNodes.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      {t("nodes.noNodes")}
                     </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {groups.map((group) => (
-          <TabsContent key={group.name} value={group.name}>
-            <Card>
-              <CardHeader>
-                <CardTitle>{group.name}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[500px]">
-                  <div className="space-y-2">
-                    {group.nodes.map((node) => (
+                  ) : (
+                    displayNodes.map((node) => (
                       <div
                         key={node.id}
                         className={cn(
@@ -252,12 +191,91 @@ export default function Nodes() {
                             {info?.config.selectedNode === node.id ? (
                               <Check className="h-4 w-4" />
                             ) : (
-                              "Select"
+                              t("nodes.select")
                             )}
                           </Button>
                         </div>
                       </div>
-                    ))}
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {groups.map((group) => (
+          <TabsContent key={group.name} value={group.name}>
+            <Card>
+              <CardHeader>
+                <CardTitle>{group.name}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[500px]">
+                  <div className="space-y-2">
+                    {group.nodes.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        {t("nodes.noNodes")}
+                      </div>
+                    ) : (
+                      group.nodes.map((node) => (
+                        <div
+                          key={node.id}
+                          className={cn(
+                            "flex items-center justify-between p-3 rounded-lg border",
+                            info?.config.selectedNode === node.id &&
+                              "border-primary bg-primary/5",
+                          )}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="flex flex-col">
+                              <span className="font-medium">{node.name}</span>
+                              <span className="text-sm text-muted-foreground">
+                                {node.server}:{node.port}
+                              </span>
+                            </div>
+                            <Badge variant="outline">{node.nodeType}</Badge>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span
+                              className={cn(
+                                "text-sm font-mono",
+                                getLatencyColor(node.latency),
+                              )}
+                            >
+                              {formatLatency(node.latency)}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleTestNode(node.id)}
+                              disabled={testingNodes.has(node.id)}
+                            >
+                              {testingNodes.has(node.id) ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <RefreshCw className="h-4 w-4" />
+                              )}
+                            </Button>
+                            <Button
+                              variant={
+                                info?.config.selectedNode === node.id
+                                  ? "default"
+                                  : "outline"
+                              }
+                              size="sm"
+                              onClick={() => handleSelectNode(node.id)}
+                            >
+                              {info?.config.selectedNode === node.id ? (
+                                <Check className="h-4 w-4" />
+                              ) : (
+                                t("nodes.select")
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </ScrollArea>
               </CardContent>

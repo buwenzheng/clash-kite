@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Power,
   ArrowUpDown,
@@ -13,6 +14,7 @@ import { useProxyStore } from "@/store";
 import { cn } from "@/lib/utils";
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const { info, loading, fetchProxyInfo, toggleProxy, restartProxy } =
     useProxyStore();
 
@@ -33,7 +35,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <h1 className="text-3xl font-bold">{t("dashboard.title")}</h1>
         <Button
           variant="outline"
           size="icon"
@@ -62,11 +64,12 @@ export default function Dashboard() {
             </Button>
             <div className="text-center">
               <Badge variant={isRunning ? "success" : "secondary"}>
-                {isRunning ? "Running" : "Stopped"}
+                {isRunning ? t("dashboard.running") : t("dashboard.stopped")}
               </Badge>
               {info?.startedAt && (
                 <p className="text-sm text-muted-foreground mt-2">
-                  Started: {new Date(info.startedAt).toLocaleString()}
+                  {t("dashboard.startedAt")}:{" "}
+                  {new Date(info.startedAt).toLocaleString()}
                 </p>
               )}
             </div>
@@ -78,7 +81,9 @@ export default function Dashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Mode</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("dashboard.mode")}
+            </CardTitle>
             <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -91,7 +96,9 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Upload</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("dashboard.upload")}
+            </CardTitle>
             <ArrowUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -99,14 +106,16 @@ export default function Dashboard() {
               {formatBytes(info?.upload || 0)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Total upload traffic
+              {t("dashboard.totalTraffic")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Download</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("dashboard.download")}
+            </CardTitle>
             <ArrowDown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -114,14 +123,16 @@ export default function Dashboard() {
               {formatBytes(info?.download || 0)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Total download traffic
+              {t("dashboard.totalTraffic")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Node</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t("dashboard.currentNode")}
+            </CardTitle>
             <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -138,24 +149,24 @@ export default function Dashboard() {
       {/* Port Info */}
       <Card>
         <CardHeader>
-          <CardTitle>Port Configuration</CardTitle>
+          <CardTitle>{t("dashboard.portConfig")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <p className="text-sm font-medium">HTTP Port</p>
+              <p className="text-sm font-medium">{t("dashboard.httpPort")}</p>
               <p className="text-2xl font-bold">
                 {info?.config.httpPort || 7890}
               </p>
             </div>
             <div className="space-y-2">
-              <p className="text-sm font-medium">SOCKS5 Port</p>
+              <p className="text-sm font-medium">{t("dashboard.socksPort")}</p>
               <p className="text-2xl font-bold">
                 {info?.config.socksPort || 7891}
               </p>
             </div>
             <div className="space-y-2">
-              <p className="text-sm font-medium">Mixed Port</p>
+              <p className="text-sm font-medium">{t("dashboard.mixedPort")}</p>
               <p className="text-2xl font-bold">
                 {info?.config.mixedPort || 7892}
               </p>

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Moon, Sun, Monitor, Globe, Shield, Info } from "lucide-react";
 import {
   Card,
@@ -12,15 +13,34 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 
 export default function Settings() {
+  const { t, i18n } = useTranslation();
   const [theme, setTheme] = useState<"light" | "dark" | "system">("system");
-  const [language, setLanguage] = useState<"zh-CN" | "en-US">("en-US");
+  const [language, setLanguage] = useState(i18n.language || "en");
   const [autoStart, setAutoStart] = useState(false);
   const [minimizeToTray, setMinimizeToTray] = useState(true);
   const [systemProxy, setSystemProxy] = useState(false);
   const [tunMode, setTunMode] = useState(false);
 
-  const handleThemeChange = (newTheme: "light" | "dark" | "system") => {
-    setTheme(newTheme);
+  useEffect(() => {
+    // Load theme from localStorage
+    const savedTheme = localStorage.getItem("theme") as
+      | "light"
+      | "dark"
+      | "system"
+      | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+      applyTheme(savedTheme);
+    }
+
+    // Load language from localStorage
+    const savedLanguage = localStorage.getItem("language");
+    if (savedLanguage) {
+      setLanguage(savedLanguage);
+    }
+  }, []);
+
+  const applyTheme = (newTheme: "light" | "dark" | "system") => {
     if (newTheme === "dark") {
       document.documentElement.classList.add("dark");
     } else if (newTheme === "light") {
@@ -35,10 +55,22 @@ export default function Settings() {
     }
   };
 
+  const handleThemeChange = (newTheme: "light" | "dark" | "system") => {
+    setTheme(newTheme);
+    localStorage.setItem("theme", newTheme);
+    applyTheme(newTheme);
+  };
+
+  const handleLanguageChange = (newLanguage: "en" | "zh") => {
+    setLanguage(newLanguage);
+    i18n.changeLanguage(newLanguage);
+    localStorage.setItem("language", newLanguage);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Settings</h1>
+        <h1 className="text-3xl font-bold">{t("settings.title")}</h1>
       </div>
 
       {/* Appearance */}
@@ -46,18 +78,18 @@ export default function Settings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Sun className="h-5 w-5" />
-            Appearance
+            {t("settings.appearance")}
           </CardTitle>
-          <CardDescription>
-            Customize the look and feel of the application
-          </CardDescription>
+          <CardDescription>{t("settings.appearanceDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <label className="text-sm font-medium">Theme</label>
+              <label className="text-sm font-medium">
+                {t("settings.theme")}
+              </label>
               <p className="text-sm text-muted-foreground">
-                Select your preferred theme
+                {t("settings.themeDesc")}
               </p>
             </div>
             <div className="flex space-x-2">
@@ -67,7 +99,7 @@ export default function Settings() {
                 onClick={() => handleThemeChange("light")}
               >
                 <Sun className="h-4 w-4 mr-2" />
-                Light
+                {t("settings.light")}
               </Button>
               <Button
                 variant={theme === "dark" ? "default" : "outline"}
@@ -75,7 +107,7 @@ export default function Settings() {
                 onClick={() => handleThemeChange("dark")}
               >
                 <Moon className="h-4 w-4 mr-2" />
-                Dark
+                {t("settings.dark")}
               </Button>
               <Button
                 variant={theme === "system" ? "default" : "outline"}
@@ -83,7 +115,7 @@ export default function Settings() {
                 onClick={() => handleThemeChange("system")}
               >
                 <Monitor className="h-4 w-4 mr-2" />
-                System
+                {t("settings.system")}
               </Button>
             </div>
           </div>
@@ -95,41 +127,45 @@ export default function Settings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Globe className="h-5 w-5" />
-            General
+            {t("settings.general")}
           </CardTitle>
-          <CardDescription>General application settings</CardDescription>
+          <CardDescription>{t("settings.generalDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <label className="text-sm font-medium">Language</label>
+              <label className="text-sm font-medium">
+                {t("settings.language")}
+              </label>
               <p className="text-sm text-muted-foreground">
-                Select your preferred language
+                {t("settings.languageDesc")}
               </p>
             </div>
             <div className="flex space-x-2">
               <Button
-                variant={language === "en-US" ? "default" : "outline"}
+                variant={language === "en" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setLanguage("en-US")}
+                onClick={() => handleLanguageChange("en")}
               >
-                English
+                {t("settings.english")}
               </Button>
               <Button
-                variant={language === "zh-CN" ? "default" : "outline"}
+                variant={language === "zh" ? "default" : "outline"}
                 size="sm"
-                onClick={() => setLanguage("zh-CN")}
+                onClick={() => handleLanguageChange("zh")}
               >
-                中文
+                {t("settings.chinese")}
               </Button>
             </div>
           </div>
 
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <label className="text-sm font-medium">Auto Start</label>
+              <label className="text-sm font-medium">
+                {t("settings.autoStart")}
+              </label>
               <p className="text-sm text-muted-foreground">
-                Launch Clash Kite when your computer starts
+                {t("settings.autoStartDesc")}
               </p>
             </div>
             <Switch checked={autoStart} onCheckedChange={setAutoStart} />
@@ -137,9 +173,11 @@ export default function Settings() {
 
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <label className="text-sm font-medium">Minimize to Tray</label>
+              <label className="text-sm font-medium">
+                {t("settings.minimizeToTray")}
+              </label>
               <p className="text-sm text-muted-foreground">
-                Keep running in the system tray when closed
+                {t("settings.minimizeToTrayDesc")}
               </p>
             </div>
             <Switch
@@ -155,18 +193,18 @@ export default function Settings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            Proxy Settings
+            {t("settings.proxySettings")}
           </CardTitle>
-          <CardDescription>
-            Configure proxy and network settings
-          </CardDescription>
+          <CardDescription>{t("settings.proxySettingsDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <label className="text-sm font-medium">System Proxy</label>
+              <label className="text-sm font-medium">
+                {t("settings.systemProxy")}
+              </label>
               <p className="text-sm text-muted-foreground">
-                Automatically set system proxy settings
+                {t("settings.systemProxyDesc")}
               </p>
             </div>
             <Switch checked={systemProxy} onCheckedChange={setSystemProxy} />
@@ -174,13 +212,15 @@ export default function Settings() {
 
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <label className="text-sm font-medium">TUN Mode</label>
+              <label className="text-sm font-medium">
+                {t("settings.tunMode")}
+              </label>
               <p className="text-sm text-muted-foreground">
-                Enable virtual network adapter mode (requires admin)
+                {t("settings.tunModeDesc")}
               </p>
             </div>
             <div className="flex items-center space-x-2">
-              <Badge variant="outline">Beta</Badge>
+              <Badge variant="outline">{t("settings.beta")}</Badge>
               <Switch checked={tunMode} onCheckedChange={setTunMode} />
             </div>
           </div>
@@ -192,26 +232,26 @@ export default function Settings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Info className="h-5 w-5" />
-            About
+            {t("settings.about")}
           </CardTitle>
-          <CardDescription>Information about Clash Kite</CardDescription>
+          <CardDescription>{t("settings.aboutDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Version</span>
+            <span className="text-sm font-medium">{t("settings.version")}</span>
             <Badge variant="outline">v0.1.0</Badge>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">Based on</span>
+            <span className="text-sm font-medium">{t("settings.basedOn")}</span>
             <Badge variant="outline">Clash Meta</Badge>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">License</span>
+            <span className="text-sm font-medium">{t("settings.license")}</span>
             <Badge variant="outline">MIT</Badge>
           </div>
           <div className="pt-4">
             <Button variant="outline" className="w-full">
-              Check for Updates
+              {t("settings.checkUpdates")}
             </Button>
           </div>
         </CardContent>
