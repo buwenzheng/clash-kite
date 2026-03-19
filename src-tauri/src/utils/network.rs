@@ -1,5 +1,5 @@
 use anyhow::Result;
-use std::net::TcpStream;
+use tokio::net::TcpStream;
 use std::time::Duration;
 
 /// 测试TCP连接延迟

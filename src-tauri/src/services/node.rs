@@ -117,9 +117,15 @@ impl NodeService {
         let node = self.get_node(node_id).await
             .ok_or_else(|| anyhow::anyhow!("Node not found: {}", node_id))?;
 
-        // 这里应该调用Clash Meta API测试延迟
-        // 暂时模拟测试结果
-        let latency = Some(rand::random::<u64>() % 1000 + 50);
+        // 实际测试TCP连接延迟
+        let (latency, success, error) = match crate::utils::network::test_tcp_latency(
+            &node.server,
+            node.port,
+            5000, // 5秒超时
+        ).await {
+            Ok(lat) => (Some(lat), true, None::<String>),
+            Err(e) => (None, false, Some(e.to_string())),
+        };
 
         // 更新节点延迟信息
         self.update_node_latency(node_id, latency).await?;
@@ -128,11 +134,11 @@ impl NodeService {
             node_id: node_id.to_string(),
             latency,
             tested_at: chrono::Utc::now(),
-            success: true,
-            error: None,
+            success,
+            error,
         };
 
-        log::info!("Tested latency for node {}: {:?}ms", node.name, latency);
+        log::info!("Tested latency for node {}: {:?}", node.name, latency);
         Ok(result)
     }
 

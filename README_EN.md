@@ -17,7 +17,8 @@ English | [中文](./README.md)
 - 🌍 **Multi-language**: English and Chinese support
 - 📡 **Subscription Support**: Import and manage proxy subscriptions
 - 🔄 **Auto Update**: Automatic subscription updates
-- 📊 **Node Testing**: Latency testing for all nodes
+- 📊 **Node Testing**: TCP connection latency testing
+- 🔔 **System Tray**: Minimize to tray with quick actions
 
 ## Tech Stack
 
@@ -198,6 +199,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [ ] TUN mode support
 - [ ] WebDAV sync
 - [x] Multi-language support (English, Chinese)
+- [x] System tray functionality
+- [x] Node latency testing (TCP connection)
 - [ ] QR code scanning
 - [ ] Traffic statistics
 - [ ] Rule editor

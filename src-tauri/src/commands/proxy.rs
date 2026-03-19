@@ -96,7 +96,7 @@ pub async fn get_proxy_traffic(
 pub async fn check_proxy_status(
     proxy_service: State<'_, ProxyService>,
 ) -> Result<String, String> {
-    let status = proxy_service.check_status().await.map_err(|e| e.to_string)?;
+    let status = proxy_service.check_status().await.map_err(|e| e.to_string())?;
     Ok(match status {
         crate::models::proxy::ProxyStatus::Stopped => "stopped".to_string(),
         crate::models::proxy::ProxyStatus::Running => "running".to_string(),

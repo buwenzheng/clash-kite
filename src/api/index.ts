@@ -199,3 +199,15 @@ export async function updateNodeGroup(
 export async function deleteNodeGroup(groupName: string): Promise<void> {
   return await invoke("delete_node_group", { groupName });
 }
+
+// ==================== 窗口相关API ====================
+
+/// 显示窗口
+export async function showWindow(): Promise<void> {
+  return await invoke("show_window");
+}
+
+/// 隐藏窗口
+export async function hideWindow(): Promise<void> {
+  return await invoke("hide_window");
+}

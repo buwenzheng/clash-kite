@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use anyhow::Result;
-use crate::models::config::{ConfigInfo, ConfigSource, SubscriptionInfo, ClashConfig};
+use crate::models::config::{ConfigInfo, ConfigSource, ClashConfig};
 
 /// 配置服务
 pub struct ConfigService {
@@ -76,6 +76,9 @@ impl ConfigService {
             return Err(anyhow::anyhow!("File not found: {}", file_path));
         }
 
+        // 确保配置目录存在
+        self.ensure_config_dir().await?;
+
         // 读取文件内容
         let content = tokio::fs::read_to_string(path).await?;
         
@@ -110,6 +113,9 @@ impl ConfigService {
 
     /// 从订阅链接导入配置
     pub async fn import_from_subscription(&self, url: &str, name: &str) -> Result<ConfigInfo> {
+        // 确保配置目录存在
+        self.ensure_config_dir().await?;
+
         // 下载订阅内容
         let client = reqwest::Client::new();
         let response = client.get(url).send().await?;
