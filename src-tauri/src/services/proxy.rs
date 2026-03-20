@@ -26,20 +26,30 @@ impl ProxyService {
     pub async fn start(&self, config_path: &str, profile_name: &str) -> Result<()> {
         self.mihomo.start(config_path).await?;
 
-        let mode_str = self.mihomo.api().get_mode().await.unwrap_or("rule".into());
+        // Read actual config from mihomo API to get real ports and mode
+        let configs = self.mihomo.api().get_configs().await?;
+
         let mut status = self.status.write().await;
         status.running = true;
-        status.mode = ProxyMode::from_str(&mode_str);
+        status.mode = ProxyMode::from_str(&configs.mode);
         status.active_profile = Some(profile_name.to_string());
+        status.http_port = configs.port;
+        status.socks_port = configs.socks_port;
+        status.mixed_port = configs.mixed_port;
+
+        log::info!(
+            "Proxy started: mode={}, http={}, socks={}, mixed={}",
+            configs.mode, configs.port, configs.socks_port, configs.mixed_port
+        );
 
         Ok(())
     }
 
     pub async fn stop(&self) -> Result<()> {
-        // Disable system proxy first
         let status = self.status.read().await;
         if status.system_proxy {
-            let _ = sysproxy::set_system_proxy(false, "127.0.0.1", status.mixed_port);
+            let port = self.resolve_proxy_port(&status);
+            let _ = sysproxy::set_system_proxy(false, "127.0.0.1", port);
         }
         drop(status);
 
@@ -61,11 +71,6 @@ impl ProxyService {
     pub async fn get_groups(&self) -> Result<Vec<ProxyGroup>> {
         let result = self.mihomo.api().get_proxies().await?;
         Ok(result.groups)
-    }
-
-    pub async fn get_all_proxies(&self) -> Result<Vec<ProxyNode>> {
-        let result = self.mihomo.api().get_proxies().await?;
-        Ok(result.nodes.into_values().collect())
     }
 
     pub async fn select_proxy(&self, group: &str, name: &str) -> Result<()> {
@@ -97,7 +102,7 @@ impl ProxyService {
 
     pub async fn set_system_proxy(&self, enable: bool) -> Result<()> {
         let status = self.status.read().await;
-        let port = status.mixed_port;
+        let port = self.resolve_proxy_port(&status);
         drop(status);
 
         sysproxy::set_system_proxy(enable, "127.0.0.1", port)?;
@@ -113,5 +118,15 @@ impl ProxyService {
 
     pub async fn is_running(&self) -> bool {
         self.mihomo.is_running().await
+    }
+
+    fn resolve_proxy_port(&self, status: &ProxyStatus) -> u16 {
+        if status.mixed_port > 0 {
+            status.mixed_port
+        } else if status.http_port > 0 {
+            status.http_port
+        } else {
+            7890
+        }
     }
 }

@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
-import { useProxyStore, useProfileStore, useSettingsStore } from "@/store";
+import { useProxyStore, useProfileStore } from "@/store";
 import type { TrafficData } from "@/types";
 
 function formatSpeed(bytes: number): string {
@@ -32,7 +32,6 @@ export function Layout() {
   const { status, toggleProxy, fetchStatus, setSystemProxy, fetchTraffic } =
     useProxyStore();
   const { profiles, fetchProfiles } = useProfileStore();
-  const { settings } = useSettingsStore();
   const [traffic, setTraffic] = useState<TrafficData>({ up: 0, down: 0 });
   const intervalRef = useRef<number | null>(null);
 
@@ -164,7 +163,7 @@ export function Layout() {
                 {t("settings.systemProxy")}
               </span>
               <Switch
-                checked={settings?.systemProxy ?? false}
+                checked={status?.systemProxy ?? false}
                 onCheckedChange={handleSystemProxy}
                 disabled={!isRunning}
                 className="scale-75"

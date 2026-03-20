@@ -1,4 +1,6 @@
+use std::sync::Arc;
 use tauri::State;
+use crate::core::mihomo::MihomoManager;
 use crate::services::proxy::ProxyService;
 use crate::services::profile::ProfileService;
 use crate::models::proxy::*;
@@ -104,4 +106,12 @@ pub async fn get_traffic(
     proxy: State<'_, ProxyService>,
 ) -> Result<TrafficData, String> {
     proxy.get_traffic().await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn get_mihomo_log(
+    mihomo: State<'_, Arc<MihomoManager>>,
+    lines: Option<usize>,
+) -> Result<String, String> {
+    Ok(mihomo.read_log_tail(lines.unwrap_or(100)))
 }

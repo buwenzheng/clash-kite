@@ -16,14 +16,6 @@ export interface ProxyGroup {
   history: DelayHistory[];
 }
 
-export interface ProxyNode {
-  name: string;
-  nodeType: string;
-  udp: boolean | null;
-  alive: boolean | null;
-  history: DelayHistory[];
-}
-
 export interface ProxyStatus {
   running: boolean;
   mode: ProxyMode;

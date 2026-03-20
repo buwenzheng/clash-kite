@@ -3,7 +3,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::models::proxy::{DelayHistory, ProxyGroup, ProxyNode, TrafficData};
+use crate::models::proxy::{DelayHistory, ProxyGroup, TrafficData};
 
 pub struct MihomoApi {
     client: Client,
@@ -13,14 +13,12 @@ pub struct MihomoApi {
 /// Raw proxy entry returned by mihomo GET /proxies
 #[derive(Debug, Deserialize)]
 struct RawProxy {
-    name: String,
     #[serde(rename = "type")]
     proxy_type: String,
     #[serde(default)]
     all: Vec<String>,
     now: Option<String>,
     udp: Option<bool>,
-    alive: Option<bool>,
     #[serde(default)]
     history: Vec<RawHistory>,
 }
@@ -36,10 +34,15 @@ struct ProxiesResponse {
     proxies: HashMap<String, RawProxy>,
 }
 
-/// Groups vs individual nodes result
 pub struct ProxiesResult {
     pub groups: Vec<ProxyGroup>,
-    pub nodes: HashMap<String, ProxyNode>,
+}
+
+pub struct MihomoConfigs {
+    pub mode: String,
+    pub port: u16,
+    pub socks_port: u16,
+    pub mixed_port: u16,
 }
 
 #[derive(Debug, Serialize)]
@@ -86,39 +89,27 @@ impl MihomoApi {
         ];
 
         let mut groups = Vec::new();
-        let mut nodes = HashMap::new();
 
         for (name, raw) in &resp.proxies {
-            let history: Vec<DelayHistory> = raw
-                .history
-                .iter()
-                .map(|h| DelayHistory {
-                    time: h.time.clone().unwrap_or_default(),
-                    delay: h.delay.unwrap_or(0),
-                })
-                .collect();
-
             if group_types.contains(&raw.proxy_type.as_str()) {
+                let history: Vec<DelayHistory> = raw
+                    .history
+                    .iter()
+                    .map(|h| DelayHistory {
+                        time: h.time.clone().unwrap_or_default(),
+                        delay: h.delay.unwrap_or(0),
+                    })
+                    .collect();
+
                 groups.push(ProxyGroup {
                     name: name.clone(),
                     group_type: raw.proxy_type.clone(),
                     all: raw.all.clone(),
                     now: raw.now.clone(),
                     udp: raw.udp,
-                    history: history.clone(),
+                    history,
                 });
             }
-
-            nodes.insert(
-                name.clone(),
-                ProxyNode {
-                    name: name.clone(),
-                    node_type: raw.proxy_type.clone(),
-                    udp: raw.udp,
-                    alive: raw.alive,
-                    history,
-                },
-            );
         }
 
         // Sort groups alphabetically but put GLOBAL first
@@ -132,7 +123,7 @@ impl MihomoApi {
             }
         });
 
-        Ok(ProxiesResult { groups, nodes })
+        Ok(ProxiesResult { groups })
     }
 
     pub async fn select_proxy(&self, group: &str, name: &str) -> Result<()> {
@@ -169,7 +160,7 @@ impl MihomoApi {
             })
     }
 
-    pub async fn get_mode(&self) -> Result<String> {
+    pub async fn get_configs(&self) -> Result<MihomoConfigs> {
         let resp: serde_json::Value = self
             .client
             .get(format!("{}/configs", self.base))
@@ -177,11 +168,12 @@ impl MihomoApi {
             .await?
             .json()
             .await?;
-        Ok(resp
-            .get("mode")
-            .and_then(|v| v.as_str())
-            .unwrap_or("rule")
-            .to_string())
+        Ok(MihomoConfigs {
+            mode: resp.get("mode").and_then(|v| v.as_str()).unwrap_or("rule").to_string(),
+            port: resp.get("port").and_then(|v| v.as_u64()).unwrap_or(0) as u16,
+            socks_port: resp.get("socks-port").and_then(|v| v.as_u64()).unwrap_or(0) as u16,
+            mixed_port: resp.get("mixed-port").and_then(|v| v.as_u64()).unwrap_or(0) as u16,
+        })
     }
 
     pub async fn set_mode(&self, mode: &str) -> Result<()> {
@@ -210,14 +202,4 @@ impl MihomoApi {
         })
     }
 
-    pub async fn reload_config(&self, path: &str) -> Result<()> {
-        let body = serde_json::json!({ "path": path });
-        self.client
-            .put(format!("{}/configs", self.base))
-            .json(&body)
-            .send()
-            .await?
-            .error_for_status()?;
-        Ok(())
-    }
 }

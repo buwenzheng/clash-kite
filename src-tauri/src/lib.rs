@@ -41,7 +41,7 @@ fn resolve_mihomo_path(app: &tauri::App) -> PathBuf {
         .join(binary_name)
 }
 
-fn resolve_files_dir(app: &tauri::App) -> PathBuf {
+fn resolve_bundled_files_dir(app: &tauri::App) -> PathBuf {
     if cfg!(debug_assertions) {
         let dev_path = std::env::current_dir()
             .unwrap_or_default()
@@ -57,9 +57,39 @@ fn resolve_files_dir(app: &tauri::App) -> PathBuf {
         .join("files")
 }
 
+/// Copy bundled GeoIP/GeoSite data files into the runtime data directory
+/// so mihomo writes its cache.db there instead of inside the source tree.
+fn sync_data_files(bundled_dir: &std::path::Path, data_dir: &std::path::Path) {
+    const DATA_FILES: &[&str] = &[
+        "country.mmdb",
+        "geoip.dat",
+        "geoip.metadb",
+        "geosite.dat",
+    ];
+    if let Err(e) = std::fs::create_dir_all(data_dir) {
+        log::error!("Failed to create data dir {:?}: {}", data_dir, e);
+        return;
+    }
+    for name in DATA_FILES {
+        let src = bundled_dir.join(name);
+        let dst = data_dir.join(name);
+        if src.exists() && !dst.exists() {
+            if let Err(e) = std::fs::copy(&src, &dst) {
+                log::warn!("Failed to copy {:?} -> {:?}: {}", src, dst, e);
+            } else {
+                log::info!("Copied data file: {}", name);
+            }
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    env_logger::init();
+    env_logger::Builder::from_env(
+        env_logger::Env::default().default_filter_or("info,clash_kite_app_lib=debug"),
+    )
+    .format_timestamp_millis()
+    .init();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -77,15 +107,22 @@ pub fn run() {
 
             // Services
             let mihomo_path = resolve_mihomo_path(app);
-            let files_dir = resolve_files_dir(app);
+            let bundled_files_dir = resolve_bundled_files_dir(app);
+            let data_dir = config_dir.join("data");
+            sync_data_files(&bundled_files_dir, &data_dir);
             log::info!("mihomo binary: {:?}", mihomo_path);
-            log::info!("data files dir: {:?}", files_dir);
+            log::info!("data dir: {:?}", data_dir);
 
-            let mihomo = Arc::new(core::mihomo::MihomoManager::new(mihomo_path));
+            let mihomo = Arc::new(core::mihomo::MihomoManager::new(
+                mihomo_path,
+                Some(data_dir),
+                config_dir.clone(),
+            ));
             let profile_svc = services::profile::ProfileService::new(config_dir.clone(), db.clone());
             let proxy_svc = services::proxy::ProxyService::new(mihomo.clone());
             let settings_svc = services::settings::SettingsService::new(db.clone());
 
+            app.manage(mihomo.clone());
             app.manage(profile_svc);
             app.manage(proxy_svc);
             app.manage(settings_svc);
@@ -143,6 +180,7 @@ pub fn run() {
             commands::proxy::set_proxy_mode,
             commands::proxy::set_system_proxy,
             commands::proxy::get_traffic,
+            commands::proxy::get_mihomo_log,
             // Profile
             commands::profile::get_profiles,
             commands::profile::get_active_profile,

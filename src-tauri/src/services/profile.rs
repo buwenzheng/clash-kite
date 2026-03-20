@@ -89,15 +89,7 @@ impl ProfileService {
     pub async fn import_subscription(&self, url: &str, name: &str) -> Result<ProfileInfo> {
         self.ensure_dir().await?;
 
-        let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(30))
-            .build()?;
-        let resp = client.get(url).send().await?;
-        if !resp.status().is_success() {
-            anyhow::bail!("Download failed: HTTP {}", resp.status());
-        }
-        let content = resp.text().await?;
-        self.validate_yaml(&content)?;
+        let content = self.download_subscription(url).await?;
 
         let id = uuid::Uuid::new_v4().to_string();
         let dest = self.profiles_dir().join(format!("{}.yaml", id));
@@ -126,15 +118,7 @@ impl ProfileService {
         let url = profile.subscription_url.as_deref()
             .ok_or_else(|| anyhow::anyhow!("Not a subscription profile"))?;
 
-        let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(30))
-            .build()?;
-        let resp = client.get(url).send().await?;
-        if !resp.status().is_success() {
-            anyhow::bail!("Update failed: HTTP {}", resp.status());
-        }
-        let content = resp.text().await?;
-        self.validate_yaml(&content)?;
+        let content = self.download_subscription(url).await?;
 
         tokio::fs::write(&profile.file_path, &content).await?;
 
@@ -233,8 +217,39 @@ impl ProfileService {
         Ok(())
     }
 
+    async fn download_subscription(&self, url: &str) -> Result<String> {
+        use base64::Engine;
+
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .user_agent("clash-kite/0.1.0 mihomo")
+            .danger_accept_invalid_certs(false)
+            .build()?;
+        let resp = client.get(url).send().await?;
+        if !resp.status().is_success() {
+            anyhow::bail!("Download failed: HTTP {}", resp.status());
+        }
+        let raw = resp.text().await?;
+
+        // Some services return base64-encoded content; detect and decode
+        let content = if raw.trim().starts_with("proxies:")
+            || raw.trim().starts_with("port:")
+            || raw.trim().starts_with("mixed-port:")
+            || raw.trim().starts_with('#')
+        {
+            raw
+        } else if let Ok(decoded) = base64::engine::general_purpose::STANDARD.decode(raw.trim()) {
+            String::from_utf8(decoded)
+                .map_err(|_| anyhow::anyhow!("Base64 decoded content is not valid UTF-8"))?
+        } else {
+            raw
+        };
+
+        self.validate_yaml(&content)?;
+        Ok(content)
+    }
+
     fn validate_yaml(&self, content: &str) -> Result<()> {
-        // Allow permissive parsing — just check basic YAML structure
         let _: serde_yaml::Value = serde_yaml::from_str(content)
             .map_err(|e| anyhow::anyhow!("Invalid YAML: {}", e))?;
         Ok(())

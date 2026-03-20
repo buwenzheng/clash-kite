@@ -41,6 +41,9 @@ export const setSystemProxy = (enable: boolean) =>
 export const getTraffic = () =>
   invoke<TrafficData>("get_traffic");
 
+export const getMihomoLog = (lines?: number) =>
+  invoke<string>("get_mihomo_log", { lines });
+
 // ==================== Profile ====================
 
 export const getProfiles = () =>

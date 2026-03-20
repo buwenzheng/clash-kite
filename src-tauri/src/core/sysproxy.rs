@@ -7,7 +7,7 @@ pub fn set_system_proxy(enable: bool, host: &str, port: u16) -> Result<()> {
 
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let key = hkcu.open_subkey_with_flags(
-        r"Software\Microsoft\Windows\Internet Settings",
+        r"Software\Microsoft\Windows\CurrentVersion\Internet Settings",
         KEY_SET_VALUE,
     )?;
 

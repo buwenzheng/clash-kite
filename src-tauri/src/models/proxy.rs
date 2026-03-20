@@ -48,18 +48,6 @@ pub struct ProxyGroup {
     pub history: Vec<DelayHistory>,
 }
 
-/// An individual proxy node as returned by mihomo GET /proxies
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ProxyNode {
-    pub name: String,
-    #[serde(rename = "type")]
-    pub node_type: String,
-    pub udp: Option<bool>,
-    pub alive: Option<bool>,
-    pub history: Vec<DelayHistory>,
-}
-
 /// High-level proxy status shown on the dashboard
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
