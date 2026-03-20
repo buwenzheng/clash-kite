@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   Globe,
   FileCode,
+  FileText,
   Settings,
   Power,
   Wifi,
@@ -70,6 +71,7 @@ export function Layout() {
 
   const navItems = [
     { path: "/", icon: LayoutDashboard, label: t("nav.dashboard") },
+    { path: "/logs", icon: FileText, label: t("nav.logs") },
     { path: "/nodes", icon: Globe, label: t("nav.nodes") },
     { path: "/profiles", icon: FileCode, label: t("nav.profiles") },
     { path: "/settings", icon: Settings, label: t("nav.settings") },

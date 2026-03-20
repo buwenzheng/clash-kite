@@ -112,6 +112,8 @@ pub async fn get_traffic(
 pub async fn get_mihomo_log(
     mihomo: State<'_, Arc<MihomoManager>>,
     lines: Option<usize>,
+    level: Option<String>,
 ) -> Result<String, String> {
-    Ok(mihomo.read_log_tail(lines.unwrap_or(100)))
+    let level = level.unwrap_or_else(|| "all".to_string());
+    Ok(mihomo.read_log_tail_filtered(lines.unwrap_or(2000), &level))
 }

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { listen } from "@tauri-apps/api/event";
 import { Layout } from "@/components/Layout";
 import Dashboard from "@/pages/Dashboard";
+import Logs from "@/pages/Logs";
 import Nodes from "@/pages/Nodes";
 import Profiles from "@/pages/Profiles";
 import Settings from "@/pages/Settings";
@@ -28,6 +29,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
+          <Route path="logs" element={<Logs />} />
           <Route path="nodes" element={<Nodes />} />
           <Route path="profiles" element={<Profiles />} />
           <Route path="settings" element={<Settings />} />

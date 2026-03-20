@@ -15,6 +15,7 @@
   },
   "nav": {
     "dashboard": "仪表盘",
+    "logs": "日志",
     "nodes": "节点",
     "profiles": "配置",
     "settings": "设置"
@@ -138,5 +139,20 @@
     "basedOn": "基于",
     "license": "许可证",
     "checkUpdates": "检查更新"
+  },
+  "logs": {
+    "title": "日志",
+    "level": {
+      "title": "日志级别",
+      "all": "全部",
+      "debug": "调试",
+      "info": "信息",
+      "warning": "警告",
+      "error": "错误"
+    },
+    "searchPlaceholder": "搜索日志...",
+    "autoScroll": "自动滚动",
+    "clear": "清空",
+    "noData": "暂无日志"
   }
 }

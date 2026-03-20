@@ -15,6 +15,7 @@
   },
   "nav": {
     "dashboard": "Dashboard",
+    "logs": "Logs",
     "nodes": "Nodes",
     "profiles": "Profiles",
     "settings": "Settings"
@@ -138,5 +139,20 @@
     "basedOn": "Based on",
     "license": "License",
     "checkUpdates": "Check for Updates"
+  },
+  "logs": {
+    "title": "Logs",
+    "level": {
+      "title": "Log Level",
+      "all": "All",
+      "debug": "Debug",
+      "info": "Info",
+      "warning": "Warning",
+      "error": "Error"
+    },
+    "searchPlaceholder": "Search logs...",
+    "autoScroll": "Auto-scroll",
+    "clear": "Clear",
+    "noData": "No logs available"
   }
 }

@@ -131,6 +131,74 @@ impl MihomoManager {
         }
     }
 
+    pub fn read_log_tail_filtered(&self, lines: usize, level: &str) -> String {
+        let requested = level.trim().to_ascii_lowercase();
+        if requested.is_empty() || requested == "all" {
+            return self.read_log_tail(lines);
+        }
+
+        let Ok(content) = fs::read_to_string(&self.log_path) else {
+            return String::new();
+        };
+
+        let all_lines: Vec<&str> = content.lines().collect();
+        if all_lines.is_empty() {
+            return String::new();
+        }
+
+        let matches_level = |line: &str| -> bool {
+            let lower = line.to_ascii_lowercase();
+            match requested.as_str() {
+                "error" => {
+                    lower.contains("[error")
+                        || lower.contains("level=error")
+                        || lower.contains("level:\"error\"")
+                        || lower.contains("level='error'")
+                        || lower.contains(" error ")
+                }
+                "warning" => {
+                    lower.contains("[warning")
+                        || lower.contains("[warn")
+                        || lower.contains("level=warning")
+                        || lower.contains("level=warn")
+                        || lower.contains("level:\"warning\"")
+                        || lower.contains("level:\"warn\"")
+                        || lower.contains(" warning ")
+                        || lower.contains(" warn ")
+                }
+                "info" => {
+                    lower.contains("[info")
+                        || lower.contains("level=info")
+                        || lower.contains("level:\"info\"")
+                        || lower.contains("level='info'")
+                        || lower.contains(" info ")
+                }
+                "debug" => {
+                    lower.contains("[debug")
+                        || lower.contains("level=debug")
+                        || lower.contains("level:\"debug\"")
+                        || lower.contains("level='debug'")
+                        || lower.contains(" debug ")
+                }
+                _ => true, // Unknown level: don't filter.
+            }
+        };
+
+        let filtered: Vec<&str> = all_lines
+            .iter()
+            .copied()
+            .filter(|l| matches_level(l))
+            .collect();
+
+        // Fail-open: if parsing rules don't match the current log format, return unfiltered tail.
+        if filtered.is_empty() {
+            return self.read_log_tail(lines);
+        }
+
+        let start = filtered.len().saturating_sub(lines);
+        filtered[start..].join("\n")
+    }
+
     async fn wait_ready(&self, max_seconds: u32) -> Result<()> {
         for i in 0..max_seconds * 4 {
             tokio::time::sleep(tokio::time::Duration::from_millis(250)).await;
