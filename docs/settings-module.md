@@ -2,7 +2,7 @@
 
 ## 1. 模块概述
 
-本模块涵盖应用设置管理、主题/国际化切换、系统托盘、窗口管理等系统集成功能，以及未来规划中的 WebDAV 同步、TUN 模式和开机自启。
+本模块涵盖应用设置管理、主题/国际化切换、系统托盘、窗口管理等系统集成功能，以及未来规划中的 WebDAV 同步与开机自启。
 
 **涉及文件：**
 
@@ -566,7 +566,14 @@ pub struct WebDavConfig {
 - 密码使用平台密钥链存储（Windows Credential Manager / macOS Keychain）或 AES 加密后存 SQLite
 - 新增 `SyncService` 和对应的 Tauri Commands
 
-### 8.2 系统代理高级设置（独立页面 `/sysproxy`，P1）
+### 8.2 系统代理 / TUN / 外部资源（已拆分模块文档）
+
+> 已迁移到独立页面模块文档（为保证 PRD 作为 AI 生成代码的核心 prompt 更清晰）：
+> - [sysproxy-module.md](sysproxy-module.md)
+> - [tun-module.md](tun-module.md)
+> - [resources-module.md](resources-module.md)
+>
+> ⚠️ 重要：以下章节内容已迁移（保留为历史参考），后续实现/代码生成请以独立模块文档为准。
 
 **目标**：提供完整的系统代理配置能力，不仅限于简单的开/关。
 
@@ -637,7 +644,9 @@ pub enum SysProxyMode {
 
 SysProxyConfig 作为 AppSettings 的子字段存储在 SQLite settings 表中，JSON 序列化。
 
-### 8.3 TUN 虚拟网卡（独立页面 `/tun`，P1）
+### 8.3 TUN 虚拟网卡（已拆分模块文档）
+
+> ⚠️ 重要：以下章节内容已迁移（保留为历史参考），后续实现/代码生成请以独立模块文档为准。
 
 **目标**：通过虚拟网卡接管系统所有网络流量。
 
@@ -738,7 +747,9 @@ tun:
 
 TunConfig 作为独立的 JSON 存储在 SQLite settings 表中（key: `tun_config`）。
 
-### 8.4 外部资源管理（独立页面 `/resources`，P1）
+### 8.4 外部资源管理（已拆分模块文档）
+
+> ⚠️ 重要：以下章节内容已迁移（保留为历史参考），后续实现/代码生成请以独立模块文档为准。
 
 **目标**：统一管理 mihomo 依赖的外部数据文件和订阅源。
 

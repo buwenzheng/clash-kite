@@ -613,6 +613,145 @@ interface OverrideItem {
 
 ---
 
+## 4.8 系统代理/TUN/外部资源/日志/连接/内核相关命令（计划中）
+
+> 本节命令尚未在当前仓库后端实现，但用于后续 AI 生成代码时的“IPC 契约”参考。
+
+### 4.8.1 系统代理（`/sysproxy`）
+
+#### 4.8.1.1 get_sysproxy_advanced_config
+
+- 返回：`SysProxyAdvancedConfig`
+- 服务调用：`SysProxyService::get_advanced_config()`
+
+#### 4.8.1.2 set_sysproxy_advanced_config
+
+- 参数：`SysProxyAdvancedConfig`
+- 行为：写入 SQLite + 如 mihomo 运行则应用
+
+#### 4.8.1.3 reset_sysproxy_advanced_defaults
+
+- 行为：恢复默认绕过与 PAC 策略，并应用当前保存的 enable 状态
+
+---
+
+### 4.8.2 TUN 虚拟网卡（`/tun`）
+
+#### 4.8.2.1 get_tun_config
+
+- 返回：`TunConfig`
+
+#### 4.8.2.2 set_tun_config
+
+- 参数：`TunConfig`
+- 行为：写入 SQLite + 重载/重启 mihomo 以应用新配置（如代理正在运行）
+
+#### 4.8.2.3 reset_tun_firewall_windows（可选）
+
+- 行为：重置 Windows 防火墙规则
+
+---
+
+### 4.8.3 外部资源（`/resources`）
+
+#### 4.8.3.1 get_geo_config
+
+- 返回：`GeoConfig`
+
+#### 4.8.3.2 set_geo_config
+
+- 参数：`GeoConfig`
+- 行为：写入 SQLite
+
+#### 4.8.3.3 update_geo_data
+
+- 行为：调用 mihomo `POST /configs/geo`
+
+#### 4.8.3.4 get_proxy_providers
+
+- 返回：`ProxyProviderItem[]`
+- HTTP：`GET /providers/proxies`
+
+#### 4.8.3.5 update_proxy_provider
+
+- 参数：`name: String`
+- HTTP：`PUT /providers/proxies/{name}`
+
+#### 4.8.3.6 get_rule_providers
+
+- 返回：`RuleProviderItem[]`
+- HTTP：`GET /providers/rules`
+
+#### 4.8.3.7 update_rule_provider
+
+- 参数：`name: String`
+- HTTP：`PUT /providers/rules/{name}`
+
+---
+
+### 4.8.4 日志（`/logs`）
+
+#### 4.8.4.1 start_log_stream（建议新增）
+
+- 参数：`level?: LogLevel | "all"`
+- 行为：优先连接 mihomo `WS /logs`；失败则 fallback 到 tail/轮询
+- 事件：`log:new`（payload: `LogItem`）
+
+#### 4.8.4.2 stop_log_stream（建议新增）
+
+- 行为：停止日志流任务
+
+#### 4.8.4.3 clear_log_cache（建议新增）
+
+- 行为：清空前端 buffer 或截断本地 `mihomo.log`（按实现选择）
+
+---
+
+### 4.8.5 连接管理（`/connections`）
+
+#### 4.8.5.1 start_connections_stream（建议新增）
+
+- 参数：`interval_ms?: number`（默认 1000）
+- 行为：通过 `GET/WS /connections` 轮询/订阅并向前端推送快照或增量
+- 事件：`connections:active`（payload: `ConnectionItem[]` 或增量）
+
+#### 4.8.5.2 stop_connections_stream（建议新增）
+
+- 行为：停止任务
+
+#### 4.8.5.3 get_connections_snapshot（建议新增）
+
+- 参数：`mode: "active" | "closed"`, `limit?`, `offset?`, `sort?`
+- 返回：`ConnectionItem[]`
+
+#### 4.8.5.4 close_connection（建议新增）
+
+- 参数：`id: String`
+- HTTP：`DELETE /connections/:id`
+
+#### 4.8.5.5 close_all_connections（建议新增）
+
+- HTTP：`DELETE /connections`
+
+---
+
+### 4.8.6 内核设置（`/kernel`）
+
+#### 4.8.6.1 get_kernel_settings
+
+- 返回：`KernelSettings`
+
+#### 4.8.6.2 set_kernel_settings
+
+- 参数：`KernelSettings`
+- 行为：写入 SQLite
+
+#### 4.8.6.3 apply_kernel_settings
+
+- 行为：生成最终 mihomo 配置片段并重启/重载内核（可用 `POST /restart` 兜底）
+
+---
+
 ## 5. 文件对话框（前端独立）
 
 以下函数不经过 Tauri Command，直接使用 `@tauri-apps/plugin-dialog`：
@@ -656,6 +795,35 @@ interface AutoUpdateResult { profileId, profileName, success, error, hotReloaded
 
 // 设置
 interface AppSettings { theme, language, autoStart, minimizeToTray, startMinimized, systemProxy, tunMode }
+
+// 系统代理（计划中）
+type SysProxyMode = "manual" | "auto";
+interface SysProxyAdvancedConfig { enable, mode: SysProxyMode, host, bypass: string[], pacScript: string | null }
+
+// TUN（计划中）
+type TunStack = "mixed" | "system" | "gvisor";
+interface TunConfig { enable, stack: TunStack, device, dnsHijack: string[], autoRoute: boolean, autoDetectInterface: boolean, strictRoute: boolean, mtu: number, routeExcludeAddress: string[] }
+
+// 外部资源（计划中）
+interface GeoxUrl { geoip: string, geosite: string, mmdb: string, asn: string }
+interface GeoConfig { geodataMode: boolean, geoAutoUpdate: boolean, geoUpdateInterval: number, geoxUrl: GeoxUrl }
+interface ProxyProviderItem { name: string, providerType: string, behavior?: string, nodeCount?: number, updatedAt?: string | null, url?: string | null }
+interface RuleProviderItem { name: string, providerType: string, behavior: string, ruleCount?: number, updatedAt?: string | null, url?: string | null }
+
+// 日志与连接（计划中）
+type LogLevel = "debug" | "info" | "warning" | "error";
+interface LogItem { ts: string, level: LogLevel, message: string, raw?: string }
+interface ConnectionItem { id: string, src: string, dst: string, protocol: string, proxy: string | null, trafficUp?: number, trafficDown?: number, duration?: number, state?: string, raw?: any }
+
+// 内核设置（计划中）
+interface KernelSettings {
+  ports: { mixedPort: number, socksPort: number, httpPort: number };
+  logLevel: "silent" | "error" | "warning" | "info" | "debug";
+  allowLan: boolean;
+  ipv6: boolean;
+  externalController: { enabled: boolean, host: string, port: number, secret: string | null };
+  advanced?: { unifiedDelay?: boolean, tcpConcurrent?: boolean, findProcessMode?: string, storeSelected?: boolean };
+}
 
 // 规则（计划中 — P2）
 interface RuleItem { ruleType, payload, proxy, size }
