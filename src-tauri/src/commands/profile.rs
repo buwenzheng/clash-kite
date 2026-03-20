@@ -71,6 +71,29 @@ pub async fn activate_profile(
 }
 
 #[tauri::command]
+pub async fn update_profile_info(
+    svc: State<'_, ProfileService>,
+    id: String,
+    name: String,
+    subscription_url: Option<String>,
+) -> Result<ProfileInfo, String> {
+    svc.update_info(&id, &name, subscription_url.as_deref())
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn export_profile(
+    svc: State<'_, ProfileService>,
+    id: String,
+    dest_path: String,
+) -> Result<(), String> {
+    svc.export_profile(&id, &dest_path)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn read_profile_content(
     svc: State<'_, ProfileService>,
     id: String,

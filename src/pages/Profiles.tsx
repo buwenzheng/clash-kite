@@ -9,15 +9,45 @@ import {
   Check,
   Link,
   Clipboard,
+  Pencil,
+  Download,
+  Code,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useProfileStore, useProxyStore } from "@/store";
 import { cn } from "@/lib/utils";
-import { openConfigFile } from "@/api";
+import {
+  openConfigFile,
+  saveConfigFile,
+  readProfileContent,
+  saveProfileContent,
+  exportProfile,
+} from "@/api";
+import type { ProfileInfo } from "@/types";
 
 function relativeTime(dateStr: string): string {
   try {
@@ -47,6 +77,7 @@ export default function Profiles() {
     importFile,
     importSubscription,
     updateSubscription,
+    updateProfileInfo,
     deleteProfile,
     activateProfile,
   } = useProfileStore();
@@ -57,6 +88,20 @@ export default function Profiles() {
   const [localName, setLocalName] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
+
+  // Delete confirmation state
+  const [deleteTarget, setDeleteTarget] = useState<ProfileInfo | null>(null);
+
+  // Edit profile info state
+  const [editTarget, setEditTarget] = useState<ProfileInfo | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editSubUrl, setEditSubUrl] = useState("");
+
+  // YAML editor state
+  const [yamlTarget, setYamlTarget] = useState<ProfileInfo | null>(null);
+  const [yamlContent, setYamlContent] = useState("");
+  const [yamlLoading, setYamlLoading] = useState(false);
+  const [yamlError, setYamlError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProfiles();
@@ -104,10 +149,10 @@ export default function Profiles() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (confirm(t("profiles.deleteConfirm"))) {
-      await deleteProfile(id);
-    }
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    await deleteProfile(deleteTarget.id);
+    setDeleteTarget(null);
   };
 
   const handleActivate = async (id: string) => {
@@ -115,6 +160,66 @@ export default function Profiles() {
     await fetchStatus();
     if (status?.running) {
       await fetchGroups();
+    }
+  };
+
+  const openEditDialog = (profile: ProfileInfo) => {
+    setEditTarget(profile);
+    setEditName(profile.name);
+    setEditSubUrl(profile.subscriptionUrl ?? "");
+  };
+
+  const handleEditSave = async () => {
+    if (!editTarget || !editName.trim()) return;
+    try {
+      await updateProfileInfo(
+        editTarget.id,
+        editName,
+        editTarget.source === "subscription" ? editSubUrl || null : null,
+      );
+      setEditTarget(null);
+    } catch (err) {
+      console.error("Update failed:", err);
+    }
+  };
+
+  const openYamlEditor = async (profile: ProfileInfo) => {
+    setYamlTarget(profile);
+    setYamlLoading(true);
+    setYamlError(null);
+    try {
+      const content = await readProfileContent(profile.id);
+      setYamlContent(content);
+    } catch (err) {
+      setYamlError(String(err));
+    } finally {
+      setYamlLoading(false);
+    }
+  };
+
+  const handleYamlSave = async () => {
+    if (!yamlTarget) return;
+    setYamlLoading(true);
+    setYamlError(null);
+    try {
+      await saveProfileContent(yamlTarget.id, yamlContent);
+      await fetchProfiles();
+      setYamlTarget(null);
+    } catch (err) {
+      setYamlError(String(err));
+    } finally {
+      setYamlLoading(false);
+    }
+  };
+
+  const handleExport = async (profile: ProfileInfo) => {
+    try {
+      const destPath = await saveConfigFile(`${profile.name}.yaml`);
+      if (destPath) {
+        await exportProfile(profile.id, destPath);
+      }
+    } catch (err) {
+      console.error("Export failed:", err);
     }
   };
 
@@ -293,6 +398,7 @@ export default function Profiles() {
                           className="h-8 w-8"
                           onClick={() => handleUpdate(profile.id)}
                           disabled={isUpdating}
+                          title={t("profiles.update")}
                         >
                           <RefreshCw
                             className={cn(
@@ -302,6 +408,33 @@ export default function Profiles() {
                           />
                         </Button>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => openEditDialog(profile)}
+                        title={t("profiles.editProfile")}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => openYamlEditor(profile)}
+                        title={t("profiles.editContent")}
+                      >
+                        <Code className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleExport(profile)}
+                        title={t("profiles.export")}
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                      </Button>
                       {!isActive && (
                         <Button
                           variant="ghost"
@@ -309,6 +442,7 @@ export default function Profiles() {
                           className="h-8 w-8"
                           onClick={() => handleActivate(profile.id)}
                           disabled={loading}
+                          title={t("profiles.use")}
                         >
                           <Check className="h-3.5 w-3.5" />
                         </Button>
@@ -317,8 +451,9 @@ export default function Profiles() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-destructive/70 hover:text-destructive"
-                        onClick={() => handleDelete(profile.id)}
+                        onClick={() => setDeleteTarget(profile)}
                         disabled={loading}
+                        title={t("common.delete")}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -346,6 +481,132 @@ export default function Profiles() {
           )}
         </div>
       </ScrollArea>
+
+      {/* Delete Confirmation AlertDialog */}
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("profiles.deleteConfirm")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget?.name && (
+                <span className="font-medium text-foreground">
+                  {deleteTarget.name}
+                </span>
+              )}
+              {" — "}
+              {t("profiles.deleteConfirmDesc")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t("common.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit Profile Info Dialog */}
+      <Dialog
+        open={!!editTarget}
+        onOpenChange={(open) => !open && setEditTarget(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("profiles.editProfile")}</DialogTitle>
+            <DialogDescription>
+              {t("profiles.editProfileDesc")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>{t("profiles.profileName")}</Label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder={t("profiles.profileName")}
+              />
+            </div>
+            {editTarget?.source === "subscription" && (
+              <div className="space-y-2">
+                <Label>{t("profiles.subscriptionUrl")}</Label>
+                <Input
+                  value={editSubUrl}
+                  onChange={(e) => setEditSubUrl(e.target.value)}
+                  placeholder={t("profiles.subscriptionUrl")}
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditTarget(null)}>
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={handleEditSave} disabled={!editName.trim()}>
+              {t("common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* YAML Content Editor Dialog */}
+      <Dialog
+        open={!!yamlTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setYamlTarget(null);
+            setYamlError(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              {t("profiles.editContent")}
+              {yamlTarget && (
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  — {yamlTarget.name}
+                </span>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {t("profiles.editContentDesc")}
+            </DialogDescription>
+          </DialogHeader>
+          {yamlError && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
+              {yamlError}
+            </div>
+          )}
+          <Textarea
+            value={yamlContent}
+            onChange={(e) => setYamlContent(e.target.value)}
+            disabled={yamlLoading}
+            className="flex-1 min-h-[400px] font-mono text-xs leading-relaxed resize-none"
+            spellCheck={false}
+          />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setYamlTarget(null);
+                setYamlError(null);
+              }}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button onClick={handleYamlSave} disabled={yamlLoading}>
+              {yamlLoading ? t("common.loading") : t("common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

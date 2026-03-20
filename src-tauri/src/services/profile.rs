@@ -158,6 +158,35 @@ impl ProfileService {
             .ok_or_else(|| anyhow::anyhow!("Profile not found: {}", id))
     }
 
+    pub async fn update_info(&self, id: &str, name: &str, subscription_url: Option<&str>) -> Result<ProfileInfo> {
+        let profile = self.get_by_id(id).await?
+            .ok_or_else(|| anyhow::anyhow!("Profile not found: {}", id))?;
+
+        let now = chrono::Utc::now().to_rfc3339();
+        let db = self.db.lock().await;
+        db.execute(
+            "UPDATE profiles SET name = ?1, sub_url = ?2, updated_at = ?3 WHERE id = ?4",
+            rusqlite::params![name, subscription_url, now, id],
+        )?;
+        drop(db);
+
+        log::info!("Updated profile info: {} -> {}", id, name);
+
+        let mut updated = profile;
+        updated.name = name.to_string();
+        updated.subscription_url = subscription_url.map(|s| s.to_string());
+        updated.updated_at = now;
+        Ok(updated)
+    }
+
+    pub async fn export_profile(&self, id: &str, dest_path: &str) -> Result<()> {
+        let profile = self.get_by_id(id).await?
+            .ok_or_else(|| anyhow::anyhow!("Profile not found: {}", id))?;
+        tokio::fs::copy(&profile.file_path, dest_path).await?;
+        log::info!("Exported profile {} to {}", id, dest_path);
+        Ok(())
+    }
+
     pub async fn read_content(&self, id: &str) -> Result<String> {
         let profile = self.get_by_id(id).await?
             .ok_or_else(|| anyhow::anyhow!("Profile not found: {}", id))?;

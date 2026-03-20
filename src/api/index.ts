@@ -67,6 +67,12 @@ export const deleteProfile = (id: string) =>
 export const activateProfile = (id: string) =>
   invoke<ProfileInfo>("activate_profile", { id });
 
+export const updateProfileInfo = (id: string, name: string, subscriptionUrl?: string | null) =>
+  invoke<ProfileInfo>("update_profile_info", { id, name, subscriptionUrl });
+
+export const exportProfile = (id: string, destPath: string) =>
+  invoke<void>("export_profile", { id, destPath });
+
 export const readProfileContent = (id: string) =>
   invoke<string>("read_profile_content", { id });
 

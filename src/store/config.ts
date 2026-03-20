@@ -11,6 +11,7 @@ interface ProfileState {
   importFile: (filePath: string, name: string) => Promise<ProfileInfo>;
   importSubscription: (url: string, name: string) => Promise<ProfileInfo>;
   updateSubscription: (id: string) => Promise<void>;
+  updateProfileInfo: (id: string, name: string, subscriptionUrl?: string | null) => Promise<void>;
   deleteProfile: (id: string) => Promise<void>;
   activateProfile: (id: string) => Promise<void>;
 }
@@ -61,6 +62,20 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       await get().fetchProfiles();
     } catch (error) {
       set({ error: String(error), loading: false });
+    }
+  },
+
+  updateProfileInfo: async (id: string, name: string, subscriptionUrl?: string | null) => {
+    set({ loading: true, error: null });
+    try {
+      const updated = await api.updateProfileInfo(id, name, subscriptionUrl);
+      set({
+        profiles: get().profiles.map((p) => (p.id === id ? updated : p)),
+        loading: false,
+      });
+    } catch (error) {
+      set({ error: String(error), loading: false });
+      throw error;
     }
   },
 

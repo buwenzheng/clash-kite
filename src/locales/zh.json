@@ -78,7 +78,17 @@
     "subscription": "订阅",
     "localFile": "本地文件",
     "updatedAt": "更新于",
-    "deleteConfirm": "确定要删除此配置吗？"
+    "deleteConfirm": "确定要删除此配置吗？",
+    "deleteConfirmDesc": "此操作不可撤销，配置文件将被永久删除。",
+    "editProfile": "编辑配置",
+    "editProfileDesc": "修改配置的名称和订阅链接",
+    "editContent": "编辑配置文件",
+    "editContentDesc": "直接编辑 YAML 配置文件内容",
+    "export": "导出",
+    "exportSuccess": "配置导出成功",
+    "saveSuccess": "保存成功",
+    "saveFailed": "保存失败",
+    "yamlError": "YAML 格式错误"
   },
   "settings": {
     "title": "设置",

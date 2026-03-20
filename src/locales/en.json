@@ -78,7 +78,17 @@
     "subscription": "Subscription",
     "localFile": "Local File",
     "updatedAt": "Updated",
-    "deleteConfirm": "Are you sure you want to delete this configuration?"
+    "deleteConfirm": "Are you sure you want to delete this configuration?",
+    "deleteConfirmDesc": "This action cannot be undone. The configuration file will be permanently deleted.",
+    "editProfile": "Edit Profile",
+    "editProfileDesc": "Modify profile name and subscription URL",
+    "editContent": "Edit Config File",
+    "editContentDesc": "Directly edit the YAML configuration file content",
+    "export": "Export",
+    "exportSuccess": "Configuration exported successfully",
+    "saveSuccess": "Saved successfully",
+    "saveFailed": "Save failed",
+    "yamlError": "Invalid YAML format"
   },
   "settings": {
     "title": "Settings",

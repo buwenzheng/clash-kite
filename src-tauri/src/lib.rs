@@ -189,6 +189,8 @@ pub fn run() {
             commands::profile::update_profile_subscription,
             commands::profile::delete_profile,
             commands::profile::activate_profile,
+            commands::profile::update_profile_info,
+            commands::profile::export_profile,
             commands::profile::read_profile_content,
             commands::profile::save_profile_content,
             // Settings
