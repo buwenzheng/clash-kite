@@ -6,6 +6,7 @@ use anyhow::Result;
 
 use crate::models::profile::{ProfileInfo, ProfileSource};
 
+#[derive(Clone)]
 pub struct ProfileService {
     config_dir: PathBuf,
     db: Arc<Mutex<Connection>>,
@@ -28,22 +29,27 @@ impl ProfileService {
         Ok(())
     }
 
+    fn row_to_profile(row: &rusqlite::Row) -> rusqlite::Result<ProfileInfo> {
+        Ok(ProfileInfo {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            source: ProfileSource::from_str(&row.get::<_, String>(2)?),
+            file_path: row.get(3)?,
+            subscription_url: row.get(4)?,
+            updated_at: row.get(5)?,
+            is_active: row.get::<_, i32>(6)? != 0,
+            auto_update: row.get::<_, i32>(7)? != 0,
+            auto_update_interval: row.get::<_, u32>(8)?,
+        })
+    }
+
+    const SELECT_COLS: &str = "id, name, source, file_path, sub_url, updated_at, is_active, auto_update, auto_update_interval";
+
     pub async fn get_all(&self) -> Result<Vec<ProfileInfo>> {
         let db = self.db.lock().await;
-        let mut stmt = db.prepare(
-            "SELECT id, name, source, file_path, sub_url, updated_at, is_active FROM profiles ORDER BY name",
-        )?;
-        let rows = stmt.query_map([], |row| {
-            Ok(ProfileInfo {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                source: ProfileSource::from_str(&row.get::<_, String>(2)?),
-                file_path: row.get(3)?,
-                subscription_url: row.get(4)?,
-                updated_at: row.get(5)?,
-                is_active: row.get::<_, i32>(6)? != 0,
-            })
-        })?;
+        let sql = format!("SELECT {} FROM profiles ORDER BY name", Self::SELECT_COLS);
+        let mut stmt = db.prepare(&sql)?;
+        let rows = stmt.query_map([], Self::row_to_profile)?;
         let mut profiles = Vec::new();
         for row in rows {
             profiles.push(row?);
@@ -79,6 +85,8 @@ impl ProfileService {
             subscription_url: None,
             updated_at: now.clone(),
             is_active: false,
+            auto_update: false,
+            auto_update_interval: 480,
         };
         self.insert_db(&profile).await?;
 
@@ -104,6 +112,8 @@ impl ProfileService {
             subscription_url: Some(url.to_string()),
             updated_at: now.clone(),
             is_active: false,
+            auto_update: false,
+            auto_update_interval: 480,
         };
         self.insert_db(&profile).await?;
 
@@ -159,7 +169,7 @@ impl ProfileService {
     }
 
     pub async fn update_info(&self, id: &str, name: &str, subscription_url: Option<&str>) -> Result<ProfileInfo> {
-        let profile = self.get_by_id(id).await?
+        self.get_by_id(id).await?
             .ok_or_else(|| anyhow::anyhow!("Profile not found: {}", id))?;
 
         let now = chrono::Utc::now().to_rfc3339();
@@ -171,12 +181,7 @@ impl ProfileService {
         drop(db);
 
         log::info!("Updated profile info: {} -> {}", id, name);
-
-        let mut updated = profile;
-        updated.name = name.to_string();
-        updated.subscription_url = subscription_url.map(|s| s.to_string());
-        updated.updated_at = now;
-        Ok(updated)
+        self.get_by_id(id).await.map(|p| p.unwrap())
     }
 
     pub async fn export_profile(&self, id: &str, dest_path: &str) -> Result<()> {
@@ -207,22 +212,51 @@ impl ProfileService {
         Ok(())
     }
 
-    async fn get_by_id(&self, id: &str) -> Result<Option<ProfileInfo>> {
+    pub async fn set_auto_update(&self, id: &str, enabled: bool, interval_minutes: u32) -> Result<ProfileInfo> {
+        let profile = self.get_by_id(id).await?
+            .ok_or_else(|| anyhow::anyhow!("Profile not found: {}", id))?;
+
+        if profile.source != ProfileSource::Subscription {
+            anyhow::bail!("Auto-update is only available for subscription profiles");
+        }
+
+        if interval_minutes < 10 {
+            anyhow::bail!("Minimum auto-update interval is 10 minutes");
+        }
+
         let db = self.db.lock().await;
-        let mut stmt = db.prepare(
-            "SELECT id, name, source, file_path, sub_url, updated_at, is_active FROM profiles WHERE id = ?1",
+        db.execute(
+            "UPDATE profiles SET auto_update = ?1, auto_update_interval = ?2 WHERE id = ?3",
+            rusqlite::params![enabled as i32, interval_minutes, id],
         )?;
-        let mut rows = stmt.query_map(rusqlite::params![id], |row| {
-            Ok(ProfileInfo {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                source: ProfileSource::from_str(&row.get::<_, String>(2)?),
-                file_path: row.get(3)?,
-                subscription_url: row.get(4)?,
-                updated_at: row.get(5)?,
-                is_active: row.get::<_, i32>(6)? != 0,
-            })
-        })?;
+        drop(db);
+
+        log::info!("Set auto-update for {}: enabled={}, interval={}m", id, enabled, interval_minutes);
+        self.get_by_id(id).await.map(|p| p.unwrap())
+    }
+
+    pub async fn get_auto_update_candidates(&self) -> Result<Vec<ProfileInfo>> {
+        let all = self.get_all().await?;
+        let now = chrono::Utc::now();
+
+        Ok(all.into_iter().filter(|p| {
+            if !p.auto_update || p.source != ProfileSource::Subscription {
+                return false;
+            }
+            if let Ok(updated) = chrono::DateTime::parse_from_rfc3339(&p.updated_at) {
+                let elapsed = now.signed_duration_since(updated);
+                elapsed.num_minutes() >= p.auto_update_interval as i64
+            } else {
+                true
+            }
+        }).collect())
+    }
+
+    pub async fn get_by_id(&self, id: &str) -> Result<Option<ProfileInfo>> {
+        let db = self.db.lock().await;
+        let sql = format!("SELECT {} FROM profiles WHERE id = ?1", Self::SELECT_COLS);
+        let mut stmt = db.prepare(&sql)?;
+        let mut rows = stmt.query_map(rusqlite::params![id], Self::row_to_profile)?;
         match rows.next() {
             Some(row) => Ok(Some(row?)),
             None => Ok(None),
@@ -232,7 +266,7 @@ impl ProfileService {
     async fn insert_db(&self, p: &ProfileInfo) -> Result<()> {
         let db = self.db.lock().await;
         db.execute(
-            "INSERT INTO profiles (id, name, source, file_path, sub_url, updated_at, is_active) VALUES (?1,?2,?3,?4,?5,?6,?7)",
+            "INSERT INTO profiles (id, name, source, file_path, sub_url, updated_at, is_active, auto_update, auto_update_interval) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)",
             rusqlite::params![
                 p.id,
                 p.name,
@@ -240,13 +274,15 @@ impl ProfileService {
                 p.file_path,
                 p.subscription_url,
                 p.updated_at,
-                p.is_active as i32
+                p.is_active as i32,
+                p.auto_update as i32,
+                p.auto_update_interval
             ],
         )?;
         Ok(())
     }
 
-    async fn download_subscription(&self, url: &str) -> Result<String> {
+    pub async fn download_subscription(&self, url: &str) -> Result<String> {
         use base64::Engine;
 
         let client = reqwest::Client::builder()
@@ -260,7 +296,6 @@ impl ProfileService {
         }
         let raw = resp.text().await?;
 
-        // Some services return base64-encoded content; detect and decode
         let content = if raw.trim().starts_with("proxies:")
             || raw.trim().starts_with("port:")
             || raw.trim().starts_with("mixed-port:")

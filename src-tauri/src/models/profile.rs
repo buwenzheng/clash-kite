@@ -36,5 +36,18 @@ pub struct ProfileInfo {
     pub subscription_url: Option<String>,
     pub updated_at: String,
     pub is_active: bool,
+    pub auto_update: bool,
+    pub auto_update_interval: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AutoUpdateResult {
+    pub profile_id: String,
+    pub profile_name: String,
+    pub success: bool,
+    pub error: Option<String>,
+    pub hot_reloaded: bool,
+    pub updated_at: String,
 }
 

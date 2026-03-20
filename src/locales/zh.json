@@ -88,7 +88,19 @@
     "exportSuccess": "配置导出成功",
     "saveSuccess": "保存成功",
     "saveFailed": "保存失败",
-    "yamlError": "YAML 格式错误"
+    "yamlError": "YAML 格式错误",
+    "autoUpdate": "自动更新",
+    "autoUpdateSettings": "自动更新设置",
+    "autoUpdateSettingsDesc": "配置订阅的自动更新间隔",
+    "enableAutoUpdate": "启用自动更新",
+    "updateInterval": "更新间隔",
+    "minutes": "分钟",
+    "hours": "小时",
+    "minIntervalHint": "最小间隔 10 分钟",
+    "lastUpdated": "上次更新",
+    "updateAll": "更新所有",
+    "updateAllDesc": "立即更新所有已开启自动更新的订阅",
+    "updatingAll": "更新中..."
   },
   "settings": {
     "title": "设置",

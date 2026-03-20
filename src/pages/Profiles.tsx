@@ -12,6 +12,7 @@ import {
   Pencil,
   Download,
   Code,
+  Timer,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,6 +69,13 @@ function relativeTime(dateStr: string): string {
   }
 }
 
+function formatInterval(minutes: number, t: (key: string) => string): string {
+  if (minutes >= 60 && minutes % 60 === 0) {
+    return `${minutes / 60}${t("profiles.hours")}`;
+  }
+  return `${minutes}${t("profiles.minutes")}`;
+}
+
 export default function Profiles() {
   const { t } = useTranslation();
   const {
@@ -80,6 +89,8 @@ export default function Profiles() {
     updateProfileInfo,
     deleteProfile,
     activateProfile,
+    setAutoUpdate,
+    updateAllAutoUpdate,
   } = useProfileStore();
   const { fetchStatus, fetchGroups, status } = useProxyStore();
 
@@ -88,6 +99,7 @@ export default function Profiles() {
   const [localName, setLocalName] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [showImport, setShowImport] = useState(false);
+  const [updatingAll, setUpdatingAll] = useState(false);
 
   // Delete confirmation state
   const [deleteTarget, setDeleteTarget] = useState<ProfileInfo | null>(null);
@@ -103,9 +115,18 @@ export default function Profiles() {
   const [yamlLoading, setYamlLoading] = useState(false);
   const [yamlError, setYamlError] = useState<string | null>(null);
 
+  // Auto-update settings state
+  const [autoUpdateTarget, setAutoUpdateTarget] = useState<ProfileInfo | null>(null);
+  const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(false);
+  const [autoUpdateInterval, setAutoUpdateInterval] = useState(480);
+
   useEffect(() => {
     fetchProfiles();
   }, [fetchProfiles]);
+
+  const hasAutoUpdateProfiles = profiles.some(
+    (p) => p.autoUpdate && p.source === "subscription",
+  );
 
   const handlePaste = async () => {
     try {
@@ -223,18 +244,65 @@ export default function Profiles() {
     }
   };
 
+  const openAutoUpdateDialog = (profile: ProfileInfo) => {
+    setAutoUpdateTarget(profile);
+    setAutoUpdateEnabled(profile.autoUpdate);
+    setAutoUpdateInterval(profile.autoUpdateInterval);
+  };
+
+  const handleAutoUpdateSave = async () => {
+    if (!autoUpdateTarget) return;
+    try {
+      await setAutoUpdate(autoUpdateTarget.id, autoUpdateEnabled, autoUpdateInterval);
+      setAutoUpdateTarget(null);
+    } catch (err) {
+      console.error("Auto-update settings failed:", err);
+    }
+  };
+
+  const handleUpdateAll = async () => {
+    setUpdatingAll(true);
+    try {
+      await updateAllAutoUpdate();
+    } catch (err) {
+      console.error("Update all failed:", err);
+    } finally {
+      setUpdatingAll(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t("profiles.title")}</h1>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowImport(!showImport)}
-        >
-          <Plus className="mr-1.5 h-3.5 w-3.5" />
-          {t("profiles.import")}
-        </Button>
+        <div className="flex items-center gap-2">
+          {hasAutoUpdateProfiles && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleUpdateAll}
+              disabled={updatingAll}
+            >
+              <RefreshCw
+                className={cn(
+                  "mr-1.5 h-3.5 w-3.5",
+                  updatingAll && "animate-spin",
+                )}
+              />
+              {updatingAll
+                ? t("profiles.updatingAll")
+                : t("profiles.updateAll")}
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowImport(!showImport)}
+          >
+            <Plus className="mr-1.5 h-3.5 w-3.5" />
+            {t("profiles.import")}
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -373,6 +441,19 @@ export default function Profiles() {
                             {t("profiles.active")}
                           </Badge>
                         )}
+                        {profile.autoUpdate &&
+                          profile.source === "subscription" && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] h-4 px-1.5 gap-0.5"
+                            >
+                              <Timer className="h-2.5 w-2.5" />
+                              {formatInterval(
+                                profile.autoUpdateInterval,
+                                t,
+                              )}
+                            </Badge>
+                          )}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs text-muted-foreground">
@@ -392,21 +473,32 @@ export default function Profiles() {
                     {/* Actions */}
                     <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                       {profile.source === "subscription" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleUpdate(profile.id)}
-                          disabled={isUpdating}
-                          title={t("profiles.update")}
-                        >
-                          <RefreshCw
-                            className={cn(
-                              "h-3.5 w-3.5",
-                              isUpdating && "animate-spin",
-                            )}
-                          />
-                        </Button>
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleUpdate(profile.id)}
+                            disabled={isUpdating}
+                            title={t("profiles.update")}
+                          >
+                            <RefreshCw
+                              className={cn(
+                                "h-3.5 w-3.5",
+                                isUpdating && "animate-spin",
+                              )}
+                            />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openAutoUpdateDialog(profile)}
+                            title={t("profiles.autoUpdateSettings")}
+                          >
+                            <Timer className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
                       )}
                       <Button
                         variant="ghost"
@@ -603,6 +695,91 @@ export default function Profiles() {
             </Button>
             <Button onClick={handleYamlSave} disabled={yamlLoading}>
               {yamlLoading ? t("common.loading") : t("common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Auto-Update Settings Dialog */}
+      <Dialog
+        open={!!autoUpdateTarget}
+        onOpenChange={(open) => !open && setAutoUpdateTarget(null)}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t("profiles.autoUpdateSettings")}</DialogTitle>
+            <DialogDescription>
+              {t("profiles.autoUpdateSettingsDesc")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-5 py-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="auto-update-switch">
+                {t("profiles.enableAutoUpdate")}
+              </Label>
+              <Switch
+                id="auto-update-switch"
+                checked={autoUpdateEnabled}
+                onCheckedChange={setAutoUpdateEnabled}
+              />
+            </div>
+            {autoUpdateEnabled && (
+              <div className="space-y-2">
+                <Label>{t("profiles.updateInterval")}</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min={10}
+                    value={autoUpdateInterval}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      if (!isNaN(val)) setAutoUpdateInterval(val);
+                    }}
+                    className="w-24 h-9"
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {t("profiles.minutes")}
+                  </span>
+                  <div className="flex gap-1 ml-auto">
+                    {[60, 240, 480, 1440].map((m) => (
+                      <Button
+                        key={m}
+                        variant={
+                          autoUpdateInterval === m ? "default" : "outline"
+                        }
+                        size="sm"
+                        className="h-7 text-xs px-2"
+                        onClick={() => setAutoUpdateInterval(m)}
+                      >
+                        {formatInterval(m, t)}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t("profiles.minIntervalHint")}
+                </p>
+              </div>
+            )}
+            {autoUpdateTarget && (
+              <div className="text-xs text-muted-foreground">
+                {t("profiles.lastUpdated")}:{" "}
+                {relativeTime(autoUpdateTarget.updatedAt)}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAutoUpdateTarget(null)}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              onClick={handleAutoUpdateSave}
+              disabled={autoUpdateEnabled && autoUpdateInterval < 10}
+            >
+              {t("common.save")}
             </Button>
           </DialogFooter>
         </DialogContent>

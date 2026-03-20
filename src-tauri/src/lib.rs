@@ -94,6 +94,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             // Paths
             let config_dir = dirs::config_dir()
@@ -122,10 +123,22 @@ pub fn run() {
             let proxy_svc = services::proxy::ProxyService::new(mihomo.clone());
             let settings_svc = services::settings::SettingsService::new(db.clone());
 
+            // Clone services for the auto-update scheduler before moving into managed state
+            let scheduler_profile_svc = profile_svc.clone();
+            let scheduler_proxy_svc = proxy_svc.clone();
+            let app_handle = app.handle().clone();
+
             app.manage(mihomo.clone());
             app.manage(profile_svc);
             app.manage(proxy_svc);
             app.manage(settings_svc);
+
+            // Start background auto-update scheduler
+            core::scheduler::AutoUpdateScheduler::start(
+                scheduler_profile_svc,
+                scheduler_proxy_svc,
+                app_handle,
+            );
 
             // System tray
             let show_i = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
@@ -191,6 +204,8 @@ pub fn run() {
             commands::profile::activate_profile,
             commands::profile::update_profile_info,
             commands::profile::export_profile,
+            commands::profile::set_profile_auto_update,
+            commands::profile::update_all_auto_update_profiles,
             commands::profile::read_profile_content,
             commands::profile::save_profile_content,
             // Settings

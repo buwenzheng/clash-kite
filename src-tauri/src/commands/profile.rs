@@ -1,7 +1,8 @@
 use tauri::State;
 use crate::services::profile::ProfileService;
 use crate::services::proxy::ProxyService;
-use crate::models::profile::ProfileInfo;
+use crate::models::profile::{ProfileInfo, AutoUpdateResult};
+use crate::core::scheduler::AutoUpdateScheduler;
 
 #[tauri::command]
 pub async fn get_profiles(
@@ -91,6 +92,27 @@ pub async fn export_profile(
     svc.export_profile(&id, &dest_path)
         .await
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn set_profile_auto_update(
+    svc: State<'_, ProfileService>,
+    id: String,
+    auto_update: bool,
+    auto_update_interval: u32,
+) -> Result<ProfileInfo, String> {
+    svc.set_auto_update(&id, auto_update, auto_update_interval)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn update_all_auto_update_profiles(
+    svc: State<'_, ProfileService>,
+    proxy: State<'_, ProxyService>,
+    app_handle: tauri::AppHandle,
+) -> Result<Vec<AutoUpdateResult>, String> {
+    Ok(AutoUpdateScheduler::update_all(&svc, &proxy, &app_handle).await)
 }
 
 #[tauri::command]

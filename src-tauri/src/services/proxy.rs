@@ -6,6 +6,7 @@ use crate::core::mihomo::MihomoManager;
 use crate::core::sysproxy;
 use crate::models::proxy::*;
 
+#[derive(Clone)]
 pub struct ProxyService {
     mihomo: Arc<MihomoManager>,
     status: Arc<RwLock<ProxyStatus>>,

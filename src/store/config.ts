@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { ProfileInfo } from "@/types";
+import type { ProfileInfo, AutoUpdateResult } from "@/types";
 import * as api from "@/api";
 
 interface ProfileState {
@@ -14,6 +14,8 @@ interface ProfileState {
   updateProfileInfo: (id: string, name: string, subscriptionUrl?: string | null) => Promise<void>;
   deleteProfile: (id: string) => Promise<void>;
   activateProfile: (id: string) => Promise<void>;
+  setAutoUpdate: (id: string, enabled: boolean, intervalMinutes: number) => Promise<void>;
+  updateAllAutoUpdate: () => Promise<AutoUpdateResult[]>;
 }
 
 export const useProfileStore = create<ProfileState>((set, get) => ({
@@ -99,6 +101,32 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       await get().fetchProfiles();
     } catch (error) {
       set({ error: String(error), loading: false });
+    }
+  },
+
+  setAutoUpdate: async (id: string, enabled: boolean, intervalMinutes: number) => {
+    set({ loading: true, error: null });
+    try {
+      const updated = await api.setProfileAutoUpdate(id, enabled, intervalMinutes);
+      set({
+        profiles: get().profiles.map((p) => (p.id === id ? updated : p)),
+        loading: false,
+      });
+    } catch (error) {
+      set({ error: String(error), loading: false });
+      throw error;
+    }
+  },
+
+  updateAllAutoUpdate: async () => {
+    set({ loading: true, error: null });
+    try {
+      const results = await api.updateAllAutoUpdateProfiles();
+      await get().fetchProfiles();
+      return results;
+    } catch (error) {
+      set({ error: String(error), loading: false });
+      throw error;
     }
   },
 }));

@@ -88,7 +88,19 @@
     "exportSuccess": "Configuration exported successfully",
     "saveSuccess": "Saved successfully",
     "saveFailed": "Save failed",
-    "yamlError": "Invalid YAML format"
+    "yamlError": "Invalid YAML format",
+    "autoUpdate": "Auto Update",
+    "autoUpdateSettings": "Auto Update Settings",
+    "autoUpdateSettingsDesc": "Configure subscription auto-update interval",
+    "enableAutoUpdate": "Enable Auto Update",
+    "updateInterval": "Update Interval",
+    "minutes": "min",
+    "hours": "hours",
+    "minIntervalHint": "Minimum interval: 10 minutes",
+    "lastUpdated": "Last updated",
+    "updateAll": "Update All",
+    "updateAllDesc": "Immediately update all auto-update subscriptions",
+    "updatingAll": "Updating..."
   },
   "settings": {
     "title": "Settings",

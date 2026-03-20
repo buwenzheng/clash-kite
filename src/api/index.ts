@@ -6,6 +6,7 @@ import type {
   DelayResult,
   TrafficData,
   ProfileInfo,
+  AutoUpdateResult,
   AppSettings,
 } from "../types";
 
@@ -72,6 +73,12 @@ export const updateProfileInfo = (id: string, name: string, subscriptionUrl?: st
 
 export const exportProfile = (id: string, destPath: string) =>
   invoke<void>("export_profile", { id, destPath });
+
+export const setProfileAutoUpdate = (id: string, autoUpdate: boolean, autoUpdateInterval: number) =>
+  invoke<ProfileInfo>("set_profile_auto_update", { id, autoUpdate, autoUpdateInterval });
+
+export const updateAllAutoUpdateProfiles = () =>
+  invoke<AutoUpdateResult[]>("update_all_auto_update_profiles");
 
 export const readProfileContent = (id: string) =>
   invoke<string>("read_profile_content", { id });

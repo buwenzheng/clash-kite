@@ -49,6 +49,17 @@ export interface ProfileInfo {
   subscriptionUrl: string | null;
   updatedAt: string;
   isActive: boolean;
+  autoUpdate: boolean;
+  autoUpdateInterval: number;
+}
+
+export interface AutoUpdateResult {
+  profileId: string;
+  profileName: string;
+  success: boolean;
+  error: string | null;
+  hotReloaded: boolean;
+  updatedAt: string;
 }
 
 // Settings types — matches Rust models::settings
