@@ -35,6 +35,16 @@ pub struct DelayHistory {
     pub delay: u32,
 }
 
+/// A single proxy node with its protocol type and delay history
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProxyNode {
+    pub name: String,
+    pub node_type: String,
+    pub udp: Option<bool>,
+    pub history: Vec<DelayHistory>,
+}
+
 /// A proxy group as returned by mihomo GET /proxies
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -43,6 +53,7 @@ pub struct ProxyGroup {
     #[serde(rename = "type")]
     pub group_type: String,
     pub all: Vec<String>,
+    pub nodes: Vec<ProxyNode>,
     pub now: Option<String>,
     pub udp: Option<bool>,
     pub history: Vec<DelayHistory>,

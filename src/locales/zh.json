@@ -56,8 +56,12 @@
     "latency": "延迟",
     "testing": "测试中...",
     "unavailable": "不可用",
+    "timeout": "超时",
     "noNodes": "暂无节点",
-    "proxyNotRunning": "代理未运行，请先在仪表盘启动代理。"
+    "proxyNotRunning": "代理未运行，请先在仪表盘启动代理。",
+    "sortDefault": "默认排序",
+    "sortDelay": "按延迟排序",
+    "sortName": "按名称排序"
   },
   "profiles": {
     "title": "配置",

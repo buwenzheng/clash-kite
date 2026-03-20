@@ -7,10 +7,18 @@ export interface DelayHistory {
   delay: number;
 }
 
+export interface ProxyNode {
+  name: string;
+  nodeType: string;
+  udp: boolean | null;
+  history: DelayHistory[];
+}
+
 export interface ProxyGroup {
   name: string;
   groupType: string;
   all: string[];
+  nodes: ProxyNode[];
   now: string | null;
   udp: boolean | null;
   history: DelayHistory[];

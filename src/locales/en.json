@@ -56,8 +56,12 @@
     "latency": "Latency",
     "testing": "Testing...",
     "unavailable": "Unavailable",
+    "timeout": "Timeout",
     "noNodes": "No nodes available",
-    "proxyNotRunning": "Proxy is not running. Start the proxy from Dashboard first."
+    "proxyNotRunning": "Proxy is not running. Start the proxy from Dashboard first.",
+    "sortDefault": "Default order",
+    "sortDelay": "Sort by delay",
+    "sortName": "Sort by name"
   },
   "profiles": {
     "title": "Profiles",

@@ -3,7 +3,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::models::proxy::{DelayHistory, ProxyGroup, TrafficData};
+use crate::models::proxy::{DelayHistory, ProxyGroup, ProxyNode, TrafficData};
 
 pub struct MihomoApi {
     client: Client,
@@ -101,10 +101,40 @@ impl MihomoApi {
                     })
                     .collect();
 
+                let nodes: Vec<ProxyNode> = raw
+                    .all
+                    .iter()
+                    .map(|node_name| {
+                        if let Some(node_raw) = resp.proxies.get(node_name) {
+                            ProxyNode {
+                                name: node_name.clone(),
+                                node_type: node_raw.proxy_type.clone(),
+                                udp: node_raw.udp,
+                                history: node_raw
+                                    .history
+                                    .iter()
+                                    .map(|h| DelayHistory {
+                                        time: h.time.clone().unwrap_or_default(),
+                                        delay: h.delay.unwrap_or(0),
+                                    })
+                                    .collect(),
+                            }
+                        } else {
+                            ProxyNode {
+                                name: node_name.clone(),
+                                node_type: "Unknown".to_string(),
+                                udp: None,
+                                history: vec![],
+                            }
+                        }
+                    })
+                    .collect();
+
                 groups.push(ProxyGroup {
                     name: name.clone(),
                     group_type: raw.proxy_type.clone(),
                     all: raw.all.clone(),
+                    nodes,
                     now: raw.now.clone(),
                     udp: raw.udp,
                     history,
