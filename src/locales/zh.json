@@ -38,7 +38,12 @@
     "mixedPort": "混合端口",
     "startedAt": "启动时间",
     "totalTraffic": "总流量",
-    "noActiveProfile": "暂无激活的配置文件。请前往配置页面导入并激活一个配置。"
+    "noActiveProfile": "暂无激活的配置文件。请前往配置页面导入并激活一个配置。",
+    "activeConfig": "当前配置",
+    "none": "无",
+    "ruleDesc": "按规则匹配流量",
+    "globalDesc": "所有流量走代理",
+    "directDesc": "完全绕过代理"
   },
   "nodes": {
     "title": "节点",

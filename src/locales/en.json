@@ -38,7 +38,12 @@
     "mixedPort": "Mixed Port",
     "startedAt": "Started at",
     "totalTraffic": "Total traffic",
-    "noActiveProfile": "No active profile. Go to Profiles to import and activate one."
+    "noActiveProfile": "No active profile. Go to Profiles to import and activate one.",
+    "activeConfig": "Active Config",
+    "none": "None",
+    "ruleDesc": "Match traffic by rules",
+    "globalDesc": "Route all via proxy",
+    "directDesc": "Bypass proxy entirely"
   },
   "nodes": {
     "title": "Nodes",

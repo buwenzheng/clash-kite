@@ -1,17 +1,11 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Moon, Sun, Monitor, Globe, Shield, Info } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { useSettingsStore, useProxyStore } from "@/store";
+import { cn } from "@/lib/utils";
 
 export default function Settings() {
   const { t, i18n } = useTranslation();
@@ -55,156 +49,169 @@ export default function Settings() {
     updateSettings({ systemProxy: enable });
   };
 
+  const themeOptions = [
+    { key: "light", icon: Sun, label: t("settings.light") },
+    { key: "dark", icon: Moon, label: t("settings.dark") },
+    { key: "system", icon: Monitor, label: t("settings.system") },
+  ];
+
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">{t("settings.title")}</h1>
+      <h1 className="text-2xl font-bold">{t("settings.title")}</h1>
 
       {/* Appearance */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sun className="h-5 w-5" />
-            {t("settings.appearance")}
-          </CardTitle>
-          <CardDescription>{t("settings.appearanceDesc")}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">{t("settings.theme")}</p>
-              <p className="text-sm text-muted-foreground">
-                {t("settings.themeDesc")}
-              </p>
+      <section className="space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <Sun className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold">{t("settings.appearance")}</h2>
+        </div>
+        <Card>
+          <CardContent className="p-4 space-y-4">
+            {/* Theme */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{t("settings.theme")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("settings.themeDesc")}
+                </p>
+              </div>
+              <div className="flex gap-1 bg-muted rounded-lg p-0.5">
+                {themeOptions.map((opt) => (
+                  <button
+                    key={opt.key}
+                    onClick={() => handleTheme(opt.key)}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                      settings.theme === opt.key
+                        ? "bg-background shadow-sm text-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <opt.icon className="h-3.5 w-3.5" />
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant={settings.theme === "light" ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleTheme("light")}
-              >
-                <Sun className="h-4 w-4 mr-1" />
-                {t("settings.light")}
-              </Button>
-              <Button
-                variant={settings.theme === "dark" ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleTheme("dark")}
-              >
-                <Moon className="h-4 w-4 mr-1" />
-                {t("settings.dark")}
-              </Button>
-              <Button
-                variant={settings.theme === "system" ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleTheme("system")}
-              >
-                <Monitor className="h-4 w-4 mr-1" />
-                {t("settings.system")}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </section>
 
       {/* General */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5" />
-            {t("settings.general")}
-          </CardTitle>
-          <CardDescription>{t("settings.generalDesc")}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">{t("settings.language")}</p>
-              <p className="text-sm text-muted-foreground">
-                {t("settings.languageDesc")}
-              </p>
+      <section className="space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <Globe className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold">{t("settings.general")}</h2>
+        </div>
+        <Card>
+          <CardContent className="p-4 space-y-4">
+            {/* Language */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">{t("settings.language")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("settings.languageDesc")}
+                </p>
+              </div>
+              <div className="flex gap-1 bg-muted rounded-lg p-0.5">
+                <button
+                  onClick={() => handleLanguage("en")}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                    settings.language === "en"
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  English
+                </button>
+                <button
+                  onClick={() => handleLanguage("zh")}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
+                    settings.language === "zh"
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  中文
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant={settings.language === "en" ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleLanguage("en")}
-              >
-                {t("settings.english")}
-              </Button>
-              <Button
-                variant={settings.language === "zh" ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleLanguage("zh")}
-              >
-                {t("settings.chinese")}
-              </Button>
-            </div>
-          </div>
 
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">
-                {t("settings.minimizeToTray")}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {t("settings.minimizeToTrayDesc")}
-              </p>
+            <div className="border-t" />
+
+            {/* Minimize to tray */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">
+                  {t("settings.minimizeToTray")}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t("settings.minimizeToTrayDesc")}
+                </p>
+              </div>
+              <Switch
+                checked={settings.minimizeToTray}
+                onCheckedChange={(v) => updateSettings({ minimizeToTray: v })}
+              />
             </div>
-            <Switch
-              checked={settings.minimizeToTray}
-              onCheckedChange={(v) => updateSettings({ minimizeToTray: v })}
-            />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </section>
 
       {/* Proxy Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
+      <section className="space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <Shield className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold">
             {t("settings.proxySettings")}
-          </CardTitle>
-          <CardDescription>{t("settings.proxySettingsDesc")}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">
-                {t("settings.systemProxy")}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {t("settings.systemProxyDesc")}
-              </p>
+          </h2>
+        </div>
+        <Card>
+          <CardContent className="p-4 space-y-4">
+            {/* System Proxy */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">
+                  {t("settings.systemProxy")}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t("settings.systemProxyDesc")}
+                </p>
+              </div>
+              <Switch
+                checked={settings.systemProxy}
+                onCheckedChange={handleSystemProxy}
+                disabled={!status?.running}
+              />
             </div>
-            <Switch
-              checked={settings.systemProxy}
-              onCheckedChange={handleSystemProxy}
-              disabled={!status?.running}
-            />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </section>
 
       {/* About */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Info className="h-5 w-5" />
-            {t("settings.about")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm">{t("settings.version")}</span>
-            <Badge variant="outline">v0.1.0</Badge>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm">{t("settings.basedOn")}</span>
-            <Badge variant="outline">mihomo (Clash Meta)</Badge>
-          </div>
-        </CardContent>
-      </Card>
+      <section className="space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <Info className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold">{t("settings.about")}</h2>
+        </div>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <p className="text-sm font-semibold">Clash Kite</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("settings.basedOn")} mihomo (Clash Meta)
+                </p>
+              </div>
+              <Badge variant="outline" className="font-mono">
+                v0.1.0
+              </Badge>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
     </div>
   );
 }

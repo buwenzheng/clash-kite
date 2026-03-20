@@ -8,14 +8,9 @@ import {
   FolderOpen,
   Check,
   Link,
+  Clipboard,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +18,24 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useProfileStore, useProxyStore } from "@/store";
 import { cn } from "@/lib/utils";
 import { openConfigFile } from "@/api";
+
+function relativeTime(dateStr: string): string {
+  try {
+    const now = Date.now();
+    const then = new Date(dateStr).getTime();
+    const diff = now - then;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days}d ago`;
+    return new Date(dateStr).toLocaleDateString();
+  } catch {
+    return dateStr;
+  }
+}
 
 export default function Profiles() {
   const { t } = useTranslation();
@@ -43,10 +56,20 @@ export default function Profiles() {
   const [subName, setSubName] = useState("");
   const [localName, setLocalName] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [showImport, setShowImport] = useState(false);
 
   useEffect(() => {
     fetchProfiles();
   }, [fetchProfiles]);
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      setSubUrl(text);
+    } catch {
+      // clipboard permission denied
+    }
+  };
 
   const handleImportFile = async () => {
     if (!localName.trim()) return;
@@ -89,181 +112,240 @@ export default function Profiles() {
 
   const handleActivate = async (id: string) => {
     await activateProfile(id);
-    // Refresh proxy status after activation
     await fetchStatus();
     if (status?.running) {
       await fetchGroups();
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    try {
-      return new Date(dateStr).toLocaleString();
-    } catch {
-      return dateStr;
-    }
-  };
-
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">{t("profiles.title")}</h1>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">{t("profiles.title")}</h1>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowImport(!showImport)}
+        >
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
+          {t("profiles.import")}
+        </Button>
+      </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600 dark:border-red-800 dark:bg-red-950 dark:text-red-400">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
           {error}
         </div>
       )}
 
-      {/* Import Local File */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FolderOpen className="h-5 w-5" />
-            {t("profiles.importLocalFile")}
-          </CardTitle>
-          <CardDescription>{t("profiles.importLocalFileDesc")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-3">
-            <Input
-              placeholder={t("profiles.profileName")}
-              value={localName}
-              onChange={(e) => setLocalName(e.target.value)}
-              className="w-48"
-            />
-            <Button
-              onClick={handleImportFile}
-              disabled={loading || !localName.trim()}
-              className="flex-1"
-            >
-              <FolderOpen className="mr-2 h-4 w-4" />
-              {t("profiles.selectFile")}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Import Panel */}
+      {showImport && (
+        <Card>
+          <CardContent className="p-4 space-y-4">
+            {/* Subscription Import */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Link className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">
+                  {t("profiles.importSubscription")}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder={t("profiles.profileName")}
+                  value={subName}
+                  onChange={(e) => setSubName(e.target.value)}
+                  className="w-36 h-9"
+                />
+                <div className="relative flex-1">
+                  <Input
+                    placeholder={t("profiles.subscriptionUrl")}
+                    value={subUrl}
+                    onChange={(e) => setSubUrl(e.target.value)}
+                    className="pr-9 h-9"
+                  />
+                  <button
+                    onClick={handlePaste}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-accent"
+                    title="Paste"
+                  >
+                    <Clipboard className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                </div>
+                <Button
+                  size="sm"
+                  className="h-9"
+                  onClick={handleImportSubscription}
+                  disabled={loading || !subUrl.trim() || !subName.trim()}
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  {t("profiles.import")}
+                </Button>
+              </div>
+            </div>
 
-      {/* Import Subscription */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Link className="h-5 w-5" />
-            {t("profiles.importSubscription")}
-          </CardTitle>
-          <CardDescription>
-            {t("profiles.importSubscriptionDesc")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-3">
-            <Input
-              placeholder={t("profiles.profileName")}
-              value={subName}
-              onChange={(e) => setSubName(e.target.value)}
-              className="w-48"
-            />
-            <Input
-              placeholder={t("profiles.subscriptionUrl")}
-              value={subUrl}
-              onChange={(e) => setSubUrl(e.target.value)}
-              className="flex-1"
-            />
-            <Button
-              onClick={handleImportSubscription}
-              disabled={loading || !subUrl.trim() || !subName.trim()}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              {t("profiles.import")}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="border-t" />
+
+            {/* Local File Import */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">
+                  {t("profiles.importLocalFile")}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder={t("profiles.profileName")}
+                  value={localName}
+                  onChange={(e) => setLocalName(e.target.value)}
+                  className="w-36 h-9"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 flex-1"
+                  onClick={handleImportFile}
+                  disabled={loading || !localName.trim()}
+                >
+                  <FolderOpen className="mr-1.5 h-3.5 w-3.5" />
+                  {t("profiles.selectFile")}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Profile List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("profiles.configurations")}</CardTitle>
-          <CardDescription>{t("profiles.configurationsDesc")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-[400px]">
-            <div className="space-y-3">
-              {profiles.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  {t("profiles.noConfigs")}
-                </div>
-              ) : (
-                profiles.map((profile) => (
-                  <div
-                    key={profile.id}
-                    className={cn(
-                      "flex items-center justify-between p-4 rounded-lg border transition-colors",
-                      profile.isActive && "border-primary bg-primary/5",
-                    )}
-                  >
-                    <div className="flex items-center gap-4 min-w-0">
-                      <FileText className="h-8 w-8 text-muted-foreground shrink-0" />
-                      <div className="min-w-0">
-                        <p className="font-medium truncate">{profile.name}</p>
-                        <p className="text-sm text-muted-foreground">
+      <ScrollArea className="h-[calc(100vh-200px)]">
+        <div className="space-y-2 pr-2">
+          {profiles.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <FileText className="h-12 w-12 mb-4 opacity-30" />
+              <p className="text-sm">{t("profiles.noConfigs")}</p>
+            </div>
+          ) : (
+            profiles.map((profile) => {
+              const isActive = profile.isActive;
+              const isUpdating = updatingId === profile.id;
+
+              return (
+                <div
+                  key={profile.id}
+                  className={cn(
+                    "group rounded-xl border bg-card p-3 transition-all duration-150",
+                    isActive
+                      ? "border-primary/30 bg-primary/[0.03] ring-1 ring-primary/10"
+                      : "hover:border-primary/20 hover:shadow-sm",
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    {/* Icon */}
+                    <div
+                      className={cn(
+                        "w-10 h-10 rounded-lg flex items-center justify-center shrink-0",
+                        isActive
+                          ? "bg-primary/10 text-primary"
+                          : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {profile.source === "subscription" ? (
+                        <Link className="h-4.5 w-4.5" />
+                      ) : (
+                        <FileText className="h-4.5 w-4.5" />
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold truncate">
+                          {profile.name}
+                        </p>
+                        {isActive && (
+                          <Badge className="text-[10px] h-4 px-1.5">
+                            {t("profiles.active")}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-muted-foreground">
                           {profile.source === "subscription"
                             ? t("profiles.subscription")
                             : t("profiles.localFile")}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {t("profiles.updatedAt")}: {formatDate(profile.updatedAt)}
-                        </p>
+                        </span>
+                        <span className="text-xs text-muted-foreground/50">
+                          ·
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {relativeTime(profile.updatedAt)}
+                        </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {profile.isActive && (
-                        <Badge>{t("profiles.active")}</Badge>
-                      )}
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                       {profile.source === "subscription" && (
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="icon"
                           className="h-8 w-8"
                           onClick={() => handleUpdate(profile.id)}
-                          disabled={updatingId === profile.id}
+                          disabled={isUpdating}
                         >
                           <RefreshCw
                             className={cn(
-                              "h-4 w-4",
-                              updatingId === profile.id && "animate-spin",
+                              "h-3.5 w-3.5",
+                              isUpdating && "animate-spin",
                             )}
                           />
                         </Button>
                       )}
+                      {!isActive && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleActivate(profile.id)}
+                          disabled={loading}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                       <Button
-                        variant={profile.isActive ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => handleActivate(profile.id)}
-                        disabled={loading || profile.isActive}
-                      >
-                        {profile.isActive ? (
-                          <Check className="h-4 w-4" />
-                        ) : (
-                          t("profiles.use")
-                        )}
-                      </Button>
-                      <Button
-                        variant="destructive"
+                        variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
+                        className="h-8 w-8 text-destructive/70 hover:text-destructive"
                         onClick={() => handleDelete(profile.id)}
                         disabled={loading}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
+
+                    {/* Active indicator / Use button */}
+                    {!isActive && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-xs"
+                        onClick={() => handleActivate(profile.id)}
+                        disabled={loading}
+                      >
+                        {t("profiles.use")}
+                      </Button>
+                    )}
+                    {isActive && (
+                      <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                    )}
                   </div>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </ScrollArea>
     </div>
   );
 }
