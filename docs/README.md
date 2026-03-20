@@ -19,6 +19,8 @@
 - [设置与系统集成模块（settings-module）](./settings-module.md)
 - [系统代理模块（sysproxy-module）](./sysproxy-module.md)
 - [TUN 虚拟网卡模块（tun-module）](./tun-module.md)
+- [DNS 配置模块（dns-module）](./dns-module.md)
+- [Sniffer 域名嗅探模块（sniffer-module）](./sniffer-module.md)
 - [外部资源模块（resources-module）](./resources-module.md)
 - [日志模块（logs-module）](./logs-module.md)
 - [连接模块（connections-module）](./connections-module.md)

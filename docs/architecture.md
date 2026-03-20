@@ -63,7 +63,7 @@
 
 | 组成         | 技术             | 职责                       |
 | ------------ | ---------------- | -------------------------- |
-| 页面组件     | React 19         | 11 个路由页面              |
+| 页面组件     | React 19         | 14 个路由页面              |
 | UI 基础组件  | Radix UI + shadcn/ui | Button/Card/Dialog 等  |
 | 路由         | react-router-dom | BrowserRouter, 嵌套路由    |
 | 样式         | Tailwind CSS     | 原子化 CSS，darkMode: class |
@@ -343,6 +343,8 @@ clash-kite/
 │   ├── proxy-module.md             # 代理模块设计
 │   ├── profile-module.md           # 配置管理模块设计
 │   ├── settings-module.md          # 设置与系统集成设计
+│   ├── dns-module.md               # DNS 配置模块设计
+│   ├── sniffer-module.md           # 域名嗅探模块设计
 │   └── api-reference.md            # API 接口参考
 │
 ├── src/                            # 前端源码
@@ -384,9 +386,11 @@ clash-kite/
 │   │   ├── Connections.tsx         # 连接管理
 │   │   ├── SysProxy.tsx            # 系统代理设置
 │   │   ├── Tun.tsx                 # TUN 虚拟网卡
+│   │   ├── Dns.tsx                 # DNS 配置
+│   │   ├── Sniffer.tsx             # 域名嗅探配置
 │   │   ├── Resources.tsx           # 外部资源管理
-│   │   ├── Kernel.tsx              # 内核设置
-│   │   └── Settings.tsx            # 应用设置
+│   │   ├── Kernel.tsx              # 内核设置（含版本管理、进程优先级）
+│   │   └── Settings.tsx            # 应用设置（含工作目录、Dashboard）
 │   └── locales/
 │       ├── zh.json                 # 中文翻译
 │       └── en.json                 # 英文翻译

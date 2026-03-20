@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /d/Project/ost/clash-kite -type f \\\\\\( -iname \"*prd*\" -o -iname \"*requirements*\" -o -iname \"*spec*\" \\\\\\) 2>/dev/null | head -20)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebSearch"
+    ]
+  }
+}

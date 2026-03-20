@@ -113,10 +113,121 @@ interface KernelSettings {
 
 ---
 
-## 8. 实现任务分解
+## 8. mihomo 进程优先级（仅 Windows）
+
+> 参考 clash-party 的 CPU 优先级设置功能。
+
+### 8.1 功能说明
+
+允许用户设置 mihomo 内核进程的 CPU 优先级，影响系统资源分配。仅 Windows 平台可用。
+
+### 8.2 数据模型
+
+在 `KernelSettings` 中新增字段：
+
+```ts
+interface KernelSettings {
+  // ... 现有字段 ...
+
+  processPriority: "low" | "below_normal" | "normal" | "above_normal" | "high" | "realtime";
+  // 默认 "normal"
+  // 仅 Windows 生效，macOS 忽略
+}
+```
+
+### 8.3 页面交互
+
+在 `/kernel` 页面的"高级选项"区块新增：
+
+| 区块 | 控件 | 说明 |
+| ---- | ---- | ---- |
+| 进程优先级 | 下拉选择 | 仅 Windows 显示；选项：低 / 低于正常 / 正常 / 高于正常 / 高 / 实时 |
+
+### 8.4 实现要点
+
+- Windows: 使用 `SetPriorityClass` WinAPI（通过 `windows-sys` crate 或 `std::os::windows`）
+- 在 mihomo 进程启动后立即设置优先级
+- 持久化到 SQLite（KernelSettings 的一部分）
+- macOS 下隐藏此选项（前端通过 `navigator.platform` 判断）
+
+---
+
+## 9. 内核版本管理
+
+> 参考 clash-party 的多内核切换功能。
+
+### 9.1 功能说明
+
+内置 mihomo 内核的稳定版（stable）和预览版（alpha），用户可在 `/kernel` 页面中切换版本。切换后自动下载对应版本二进制并替换。
+
+### 9.2 数据模型
+
+```ts
+interface CoreVersionInfo {
+  currentVersion: string;           // 当前使用的版本号
+  currentChannel: "stable" | "alpha";
+  latestStable: string | null;      // GitHub 最新稳定版
+  latestAlpha: string | null;       // GitHub 最新预览版
+  downloading: boolean;             // 是否正在下载
+}
+```
+
+### 9.3 页面交互
+
+在 `/kernel` 页面新增"内核版本"区块（放在最顶部或端口配置之前）：
+
+```
+┌────────────────────────────────────────────────────┐
+│ ── 内核版本 ──────────────────────────────         │
+│ 当前版本       v1.19.0 (stable)                    │
+│ 版本通道       [稳定版] [预览版]                     │
+│ 最新版本       v1.19.1                [检查更新]    │
+│ [下载并切换]                                        │
+└────────────────────────────────────────────────────┘
+```
+
+### 9.4 Tauri Command 契约
+
+#### 9.4.1 get_core_version_info
+
+- 返回：`CoreVersionInfo`
+- 行为：读取当前 mihomo 版本（执行 `mihomo -v`），读取 SQLite 中保存的通道偏好
+
+#### 9.4.2 check_core_update
+
+- 参数：`channel: "stable" | "alpha"`
+- 返回：`{ version: string, downloadUrl: string, hasUpdate: boolean }`
+- 行为：请求 GitHub Releases API
+
+#### 9.4.3 download_and_switch_core
+
+- 参数：`channel: "stable" | "alpha"`, `version: string`
+- 行为：
+  1. 停止当前 mihomo 进程
+  2. 下载对应版本二进制到临时目录
+  3. 替换 sidecar 目录中的 mihomo 二进制
+  4. 重新启动 mihomo
+  5. 更新 SQLite 中的通道和版本信息
+- 返回：`CoreVersionInfo`
+
+### 9.5 实现要点
+
+- GitHub API：`https://api.github.com/repos/MetaCubeX/mihomo/releases`
+  - stable: 非 prerelease 的最新 release
+  - alpha: prerelease 为 true 的最新 release
+- 下载 asset 匹配逻辑：按平台和架构选取（与 prepare.mjs 相同的逻辑）
+- 替换前备份当前二进制，切换失败可回滚
+- 下载进度通过 Tauri event 推送给前端（`core:download-progress`）
+
+---
+
+## 10. 实现任务分解
 
 1. KernelSettings 模型 + SQLite 存储
 2. 最终 mihomo 配置生成器接入（ports/log/api/advanced 注入）
 3. Tauri commands：get/set/apply
 4. 前端 `/kernel` 页面：表单联动 + Apply 按钮 + 状态提示
+5. 进程优先级设置（Windows WinAPI，启动后设置）
+6. 内核版本管理：CoreVersionInfo 模型、GitHub API 集成、下载/替换/回滚
+7. 前端 `/kernel` 页面：版本区块 + 通道切换 + 下载进度
 

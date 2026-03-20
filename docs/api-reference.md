@@ -613,9 +613,9 @@ interface OverrideItem {
 
 ---
 
-## 4.8 系统代理/TUN/外部资源/日志/连接/内核相关命令（计划中）
+## 4.8 系统代理/TUN/外部资源/日志/连接/内核/DNS/Sniffer 相关命令（计划中）
 
-> 本节命令尚未在当前仓库后端实现，但用于后续 AI 生成代码时的“IPC 契约”参考。
+> 本节命令尚未在当前仓库后端实现，但用于后续 AI 生成代码时的”IPC 契约”参考。
 
 ### 4.8.1 系统代理（`/sysproxy`）
 
@@ -752,6 +752,106 @@ interface OverrideItem {
 
 ---
 
+### 4.8.7 DNS 配置（`/dns`）
+
+#### 4.8.7.1 get_dns_config
+
+- 返回：`DnsConfig`
+- 行为：从 SQLite 读取（key: `dns_config`），不存在返回默认值
+
+#### 4.8.7.2 set_dns_config
+
+- 参数：`DnsConfig`
+- 行为：写入 SQLite
+
+#### 4.8.7.3 apply_dns_config
+
+- 行为：将 DnsConfig 注入最终配置的 `dns` 字段 + 重启/重载内核
+
+---
+
+### 4.8.8 Sniffer 域名嗅探（`/sniffer`）
+
+#### 4.8.8.1 get_sniffer_config
+
+- 返回：`SnifferConfig`
+- 行为：从 SQLite 读取（key: `sniffer_config`），不存在返回默认值
+
+#### 4.8.8.2 set_sniffer_config
+
+- 参数：`SnifferConfig`
+- 行为：写入 SQLite
+
+#### 4.8.8.3 apply_sniffer_config
+
+- 行为：将 SnifferConfig 注入最终配置的 `sniffer` 字段 + 重启/重载内核
+
+---
+
+### 4.8.9 内核版本管理
+
+#### 4.8.9.1 get_core_version_info
+
+- 返回：`CoreVersionInfo`
+- 行为：读取当前 mihomo 版本（`mihomo -v`），读取 SQLite 中保存的通道偏好
+
+#### 4.8.9.2 check_core_update
+
+- 参数：`channel: "stable" | "alpha"`
+- 返回：`{ version: string, downloadUrl: string, hasUpdate: boolean }`
+- 行为：请求 GitHub Releases API
+
+#### 4.8.9.3 download_and_switch_core
+
+- 参数：`channel: "stable" | "alpha"`, `version: string`
+- 返回：`CoreVersionInfo`
+- 行为：停止 mihomo → 下载新版本 → 替换二进制 → 重启
+- 事件：`core:download-progress`（payload: `{ downloaded: number, total: number }`）
+
+---
+
+### 4.8.10 二维码导入
+
+#### 4.8.10.1 decode_qr_from_screen
+
+- 返回：`String | null`
+- 行为：截屏并识别二维码，返回解析到的 URL
+
+#### 4.8.10.2 decode_qr_from_file
+
+- 参数：`file_path: String`
+- 返回：`String | null`
+- 行为：从图片文件识别二维码，返回解析到的 URL
+
+---
+
+### 4.8.11 工作目录 & Dashboard
+
+#### 4.8.11.1 get_work_dir
+
+- 返回：`String`
+- 行为：返回当前工作目录路径
+
+#### 4.8.11.2 set_work_dir
+
+- 参数：`path: String`
+- 行为：设置新工作目录，提示重启
+
+#### 4.8.11.3 migrate_work_dir
+
+- 参数：`from: String`, `to: String`
+- 行为：迁移数据到新目录
+
+#### 4.8.11.4 open_dashboard
+
+- 行为：在系统浏览器中打开 MetaCubeXd Dashboard
+
+#### 4.8.11.5 download_dashboard
+
+- 行为：下载 metacubexd 资源到 data/ui/ 目录
+
+---
+
 ## 5. 文件对话框（前端独立）
 
 以下函数不经过 Tauri Command，直接使用 `@tauri-apps/plugin-dialog`：
@@ -823,6 +923,26 @@ interface KernelSettings {
   ipv6: boolean;
   externalController: { enabled: boolean, host: string, port: number, secret: string | null };
   advanced?: { unifiedDelay?: boolean, tcpConcurrent?: boolean, findProcessMode?: string, storeSelected?: boolean };
+  processPriority: "low" | "below_normal" | "normal" | "above_normal" | "high" | "realtime";  // 仅 Windows
+}
+
+// 内核版本（计划中）
+interface CoreVersionInfo { currentVersion: string, currentChannel: "stable" | "alpha", latestStable: string | null, latestAlpha: string | null, downloading: boolean }
+
+// DNS 配置（计划中）
+interface DnsConfig {
+  enable: boolean, listen: string, enhancedMode: "fake-ip" | "redir-host",
+  fakeIpRange: string, fakeIpFilter: string[],
+  defaultNameserver: string[], nameserver: string[], fallback: string[],
+  fallbackFilter: { geoip: boolean, geoipCode: string, ipcidr: string[] }
+}
+
+// Sniffer 配置（计划中）
+interface SniffProtocol { ports: string[], overrideDestination: boolean }
+interface SnifferConfig {
+  enable: boolean,
+  sniff: { HTTP?: SniffProtocol, TLS?: SniffProtocol, QUIC?: SniffProtocol },
+  forceDomain: string[], skipDomain: string[], portWhitelist: string[]
 }
 
 // 规则（计划中 — P2）

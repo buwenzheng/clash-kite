@@ -566,275 +566,85 @@ pub struct WebDavConfig {
 - 密码使用平台密钥链存储（Windows Credential Manager / macOS Keychain）或 AES 加密后存 SQLite
 - 新增 `SyncService` 和对应的 Tauri Commands
 
-### 8.2 系统代理 / TUN / 外部资源（已拆分模块文档）
+### 8.2 已拆分模块文档
 
-> 已迁移到独立页面模块文档（为保证 PRD 作为 AI 生成代码的核心 prompt 更清晰）：
-> - [sysproxy-module.md](sysproxy-module.md)
-> - [tun-module.md](tun-module.md)
-> - [resources-module.md](resources-module.md)
->
-> ⚠️ 重要：以下章节内容已迁移（保留为历史参考），后续实现/代码生成请以独立模块文档为准。
+> 以下功能已迁移为独立模块文档，后续实现/代码生成请以独立文档为准：
+> - [sysproxy-module.md](sysproxy-module.md) — 系统代理（manual/PAC、绕过列表）
+> - [tun-module.md](tun-module.md) — TUN 虚拟网卡（stack、权限、路由）
+> - [resources-module.md](resources-module.md) — 外部资源（GeoData、Provider）
+> - [dns-module.md](dns-module.md) — DNS 配置（fake-ip、nameserver、fallback）
+> - [sniffer-module.md](sniffer-module.md) — 域名嗅探（协议检测、force/skip-domain）
 
-**目标**：提供完整的系统代理配置能力，不仅限于简单的开/关。
+### 8.3 工作目录配置（P1）
 
-#### 8.2.1 数据模型
+> 参考 clash-party 的工作目录功能，允许用户自定义数据存储目录。
 
-```rust
-pub struct SysProxyConfig {
-    pub enable: bool,
-    pub mode: SysProxyMode,        // Manual | Auto (PAC)
-    pub host: String,              // 默认 "127.0.0.1"
-    pub bypass: Vec<String>,       // 绕过列表
-    pub pac_script: Option<String>, // 自定义 PAC 脚本
-}
+**目标**：允许用户配置独立的数据存储目录，实现多实例数据隔离或将数据放在指定位置。
 
-pub enum SysProxyMode {
-    Manual,  // 手动代理模式
-    Auto,    // PAC 自动代理模式
-}
-```
-
-#### 8.2.2 页面 UI
-
-```
-┌────────────────────────────────────────────────┐
-│ 系统代理                                        │
-├────────────────────────────────────────────────┤
-│                                                │
-│ 系统代理         [━━━ ON ━━━]                   │
-│                                                │
-│ 代理模式         [手动代理] [PAC 自动代理]       │
-│                                                │
-│ 代理主机         [127.0.0.1            ]        │
-│                                                │
-│ ── 绕过列表 ────────────────────────────        │
-│ localhost                                       │
-│ 127.*                                           │
-│ 192.168.*                                       │
-│ 10.*                                            │
-│ ...                              [添加默认绕过]  │
-│                                                │
-│ ── PAC 脚本（仅 PAC 模式）──────────────        │
-│ function FindProxyForURL(url, host) {           │
-│   return "PROXY 127.0.0.1:%mixed-port%;        │
-│           DIRECT;";                             │
-│ }                                               │
-│                                                │
-│ ── Windows 专属 ────────────────────────        │
-│ [打开 UWP 回环解锁工具]                         │
-│                                                │
-└────────────────────────────────────────────────┘
-```
-
-#### 8.2.3 平台默认绕过列表
-
-| 平台    | 默认绕过                                                         |
-| ------- | ---------------------------------------------------------------- |
-| Windows | `localhost`, `127.*`, `192.168.*`, `10.*`, `172.16.*`–`172.31.*` |
-| macOS   | `127.0.0.1`, `192.168.0.0/16`, `10.0.0.0/8`, `172.16.0.0/12`, `localhost`, `*.local`, `*.crashlytics.com` |
-
-#### 8.2.4 PAC 模式实现
-
-- 启用 PAC 模式时，在本地启动 HTTP 服务器托管 PAC 脚本
-- 端口从 10000 起自动扫描可用端口
-- 系统代理设置为 PAC URL：`http://127.0.0.1:{pac_port}/proxy.pac`
-- 支持 `%mixed-port%` 占位符，自动替换为 mihomo 的 mixed-port
-
-#### 8.2.5 存储
-
-SysProxyConfig 作为 AppSettings 的子字段存储在 SQLite settings 表中，JSON 序列化。
-
-### 8.3 TUN 虚拟网卡（已拆分模块文档）
-
-> ⚠️ 重要：以下章节内容已迁移（保留为历史参考），后续实现/代码生成请以独立模块文档为准。
-
-**目标**：通过虚拟网卡接管系统所有网络流量。
-
-#### 8.3.1 数据模型
+**数据模型变更（AppSettings 新增字段）：**
 
 ```rust
-pub struct TunConfig {
-    pub enable: bool,
-    pub stack: TunStack,            // Mixed | System | Gvisor
-    pub device: String,             // macOS: "utun1500", Windows: "Mihomo"
-    pub dns_hijack: Vec<String>,    // 默认 ["any:53"]
-    pub auto_route: bool,           // 默认 true
-    pub auto_detect_interface: bool, // 默认 true
-    pub strict_route: bool,         // 默认 false
-    pub mtu: u32,                   // 默认 1500
-    pub route_exclude_address: Vec<String>,
-}
-
-pub enum TunStack {
-    Mixed,   // 混合模式（推荐）
-    System,  // 系统网络栈
-    Gvisor,  // 用户态网络栈
+pub struct AppSettings {
+    // ... 现有字段 ...
+    pub work_dir: Option<String>,    // 自定义工作目录，None 表示使用默认目录
 }
 ```
 
-#### 8.3.2 页面 UI
+**Settings 页面新增：**
 
 ```
-┌────────────────────────────────────────────────┐
-│ TUN 虚拟网卡                                    │
-├────────────────────────────────────────────────┤
-│                                                │
-│ TUN 模式           [━━━ OFF ━━]                 │
-│                                                │
-│ 网络栈 Stack       [Mixed] [System] [Gvisor]    │
-│ 设备名称           [utun1500         ]          │
-│ MTU                [1500             ]          │
-│                                                │
-│ ── 路由设置 ────────────────────────────        │
-│ Auto Route         [━━━ ON ━━━]                 │
-│ Strict Route       [━━━ OFF ━━]                 │
-│ Auto Detect Interface [━━━ ON ━━━]              │
-│                                                │
-│ ── DNS ────────────────────────────────         │
-│ DNS Hijack         [any:53           ]          │
-│                                                │
-│ ── 路由排除地址 ───────────────────────         │
-│ （每行一个 CIDR）                                │
-│ [                                    ]          │
-│                                                │
-│ ── 权限管理 ───────────────────────────         │
-│ [授权内核] [重置防火墙规则(Win)]                 │
-│                                                │
-└────────────────────────────────────────────────┘
+├── 高级 (Advanced)
+│   └── 工作目录: [~/.config/clash-kite/    ] [浏览] [重置默认]
+│       提示：修改后需重启应用生效
 ```
 
-#### 8.3.3 权限处理
+**实现要点：**
+- 默认目录：`~/.config/clash-kite/`（各平台等价路径）
+- 修改工作目录后需要重启应用（提示用户）
+- 切换目录时提供"迁移数据"选项（复制现有 profiles + data.db + data/ 到新目录）
+- 新增 Tauri Commands：
+  - `get_work_dir` — 返回当前工作目录路径
+  - `set_work_dir(path)` — 设置新工作目录并提示重启
+  - `migrate_work_dir(from, to)` — 迁移数据到新目录
 
-| 平台    | 权限需求                           | 操作                                          |
-| ------- | ---------------------------------- | --------------------------------------------- |
-| Windows | 管理员权限                         | 提示用户以管理员模式重启应用                  |
-| macOS   | `chown root` + `chmod +s` 内核二进制 | 调用 osascript 请求密码后执行 chmod           |
+### 8.4 MetaCubeXd Dashboard 集成（P2）
 
-**权限检测流程：**
+> 参考 clash-party，集成 mihomo 官方 Web Dashboard。
 
-```
-TUN 开关 ON
-  │
-  ├─ 检测权限 → 有权限 → 写入 TUN 配置 → 重启内核
-  │
-  └─ 无权限 → 弹出权限提升对话框
-       ├─ 用户确认 → 执行授权 → 重试
-       └─ 用户取消 → TUN 保持 OFF
-```
+**目标**：提供内置的 MetaCubeXd Dashboard 访问入口，作为备用的代理管理界面。
 
-**运行时权限丢失检测：**
-mihomo 输出 `configure tun interface: operation not permitted` 时，自动关闭 TUN 并通知前端。
+**实现方式（二选一）：**
 
-#### 8.3.4 mihomo 配置生成
+| 方案 | 说明 | 优点 | 缺点 |
+| ---- | ---- | ---- | ---- |
+| 外部浏览器打开 | 点击按钮在浏览器中打开 `http://127.0.0.1:{external-controller-port}/ui` | 实现简单 | 需要下载 dashboard 资源 |
+| 内嵌 WebView | 在应用内新开一个页面/窗口加载 dashboard URL | 无缝体验 | 需额外窗口管理 |
 
-TUN 配置写入 mihomo 最终配置文件：
+**推荐方案 A（外部浏览器）：**
+- 在 Settings 页面"关于"区域添加"打开 Dashboard"按钮
+- 使用 `tauri::api::shell::open()` 打开 `http://127.0.0.1:{port}/ui`
+- 需要先确保 external-controller 已配置且 dashboard 资源已下载
+- Dashboard 资源（metacubexd）下载到 `data/ui/` 目录
 
-```yaml
-tun:
-  enable: true
-  stack: mixed
-  device: utun1500
-  dns-hijack:
-    - any:53
-  auto-route: true
-  auto-detect-interface: true
-  strict-route: false
-  mtu: 1500
-  route-exclude-address: []
-```
-
-#### 8.3.5 存储
-
-TunConfig 作为独立的 JSON 存储在 SQLite settings 表中（key: `tun_config`）。
-
-### 8.4 外部资源管理（已拆分模块文档）
-
-> ⚠️ 重要：以下章节内容已迁移（保留为历史参考），后续实现/代码生成请以独立模块文档为准。
-
-**目标**：统一管理 mihomo 依赖的外部数据文件和订阅源。
-
-#### 8.4.1 页面结构
-
-页面分为三个区域：
+**前端入口：**
 
 ```
-┌────────────────────────────────────────────────────┐
-│ 外部资源                                  [全部更新] │
-├────────────────────────────────────────────────────┤
-│                                                    │
-│ ── 地理数据 ───────────────────────────────────    │
-│ ┌────────────┐ ┌────────────┐ ┌────────────┐      │
-│ │ GeoIP      │ │ GeoSite    │ │ ASN        │      │
-│ │ mmdb/dat   │ │ dat        │ │ mmdb       │      │
-│ │ 更新: 2h前 │ │ 更新: 2h前 │ │ 更新: 1d前 │      │
-│ │    [🔄] [⚙] │ │    [🔄] [⚙] │ │    [🔄] [⚙] │      │
-│ └────────────┘ └────────────┘ └────────────┘      │
-│                                                    │
-│ Geodata 模式    [dat] [mmdb]                       │
-│ 自动更新        [━━━ OFF ━━]   间隔 [24] 小时      │
-│                                                    │
-│ ── Proxy Provider（代理订阅源）─────────────────   │
-│ ┌──────────────────────────────────────────────┐  │
-│ │ 订阅名称    │ 类型  │ 节点数 │ 更新时间 │ [🔄]  │  │
-│ │ my-airport  │ HTTP  │ 42     │ 2h前     │      │  │
-│ │ backup      │ File  │ 15     │ 1d前     │      │  │
-│ └──────────────────────────────────────────────┘  │
-│                                                    │
-│ ── Rule Provider（规则订阅源）──────────────────   │
-│ ┌──────────────────────────────────────────────┐  │
-│ │ 名称        │ 行为    │ 规则数 │ 更新时间 │ [🔄] │  │
-│ │ reject      │ domain  │ 2340   │ 2h前     │     │  │
-│ │ direct      │ domain  │ 156    │ 2h前     │     │  │
-│ │ proxy       │ domain  │ 892    │ 2h前     │     │  │
-│ └──────────────────────────────────────────────┘  │
-│                                                    │
-└────────────────────────────────────────────────────┘
+Settings 页面
+├── 关于 (About)
+│   ├── Clash Kite v0.1.0
+│   ├── [检查更新]
+│   └── [打开 MetaCubeXd Dashboard]  ← 新增
 ```
 
-#### 8.4.2 地理数据配置
+**Tauri Command 契约：**
 
-```rust
-pub struct GeoConfig {
-    pub geodata_mode: bool,     // false=mmdb, true=dat
-    pub geo_auto_update: bool,
-    pub geo_update_interval: u32, // 小时，默认 24
-    pub geox_url: GeoxUrl,
-}
+| Command                   | 参数 | 返回值                           | 说明                  |
+| ------------------------- | ---- | -------------------------------- | --------------------- |
+| `open_dashboard`          | 无   | `()`                             | 在浏览器中打开 Dashboard |
+| `check_dashboard_exists`  | 无   | `bool`                           | 检查 dashboard 资源是否存在 |
+| `download_dashboard`      | 无   | `()`                             | 下载 metacubexd 资源  |
 
-pub struct GeoxUrl {
-    pub geoip: String,    // geoip.dat 下载 URL
-    pub geosite: String,  // geosite.dat 下载 URL
-    pub mmdb: String,     // country.mmdb / geoip.metadb 下载 URL
-    pub asn: String,      // GeoLite2-ASN.mmdb 下载 URL
-}
-```
-
-**默认 URL（MetaCubeX 官方源）：**
-
-| 资源    | 默认 URL                                                                                |
-| ------- | --------------------------------------------------------------------------------------- |
-| geoip   | `https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip-lite.dat`  |
-| geosite | `https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat`     |
-| mmdb    | `https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb`    |
-| asn     | `https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb` |
-
-#### 8.4.3 mihomo API 交互
-
-| 操作               | API                              | 说明                         |
-| ------------------ | -------------------------------- | ---------------------------- |
-| 更新地理数据       | `POST /configs/geo`              | mihomo 重新下载所有 geo 数据 |
-| 获取 Proxy Provider| `GET /providers/proxies`         | 获取代理订阅源列表           |
-| 刷新 Proxy Provider| `PUT /providers/proxies/{name}`  | 重新拉取指定代理订阅         |
-| 获取 Rule Provider | `GET /providers/rules`           | 获取规则订阅源列表           |
-| 刷新 Rule Provider | `PUT /providers/rules/{name}`    | 重新拉取指定规则订阅         |
-
-#### 8.4.4 存储
-
-- GeoConfig 存储在 SQLite settings 表（key: `geo_config`）
-- 地理数据文件存储在 `~/.config/clash-kite/data/` 目录
-- Provider 数据由 mihomo 管理，无需额外存储
-
-### 8.3 开机自启（P1）
+### 8.5 开机自启（P1）
 
 **目标**：应用跟随系统启动。
 
