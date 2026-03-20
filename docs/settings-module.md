@@ -566,42 +566,262 @@ pub struct WebDavConfig {
 - 密码使用平台密钥链存储（Windows Credential Manager / macOS Keychain）或 AES 加密后存 SQLite
 - 新增 `SyncService` 和对应的 Tauri Commands
 
-### 8.2 TUN 模式（P1）
+### 8.2 系统代理高级设置（独立页面 `/sysproxy`，P1）
+
+**目标**：提供完整的系统代理配置能力，不仅限于简单的开/关。
+
+#### 8.2.1 数据模型
+
+```rust
+pub struct SysProxyConfig {
+    pub enable: bool,
+    pub mode: SysProxyMode,        // Manual | Auto (PAC)
+    pub host: String,              // 默认 "127.0.0.1"
+    pub bypass: Vec<String>,       // 绕过列表
+    pub pac_script: Option<String>, // 自定义 PAC 脚本
+}
+
+pub enum SysProxyMode {
+    Manual,  // 手动代理模式
+    Auto,    // PAC 自动代理模式
+}
+```
+
+#### 8.2.2 页面 UI
+
+```
+┌────────────────────────────────────────────────┐
+│ 系统代理                                        │
+├────────────────────────────────────────────────┤
+│                                                │
+│ 系统代理         [━━━ ON ━━━]                   │
+│                                                │
+│ 代理模式         [手动代理] [PAC 自动代理]       │
+│                                                │
+│ 代理主机         [127.0.0.1            ]        │
+│                                                │
+│ ── 绕过列表 ────────────────────────────        │
+│ localhost                                       │
+│ 127.*                                           │
+│ 192.168.*                                       │
+│ 10.*                                            │
+│ ...                              [添加默认绕过]  │
+│                                                │
+│ ── PAC 脚本（仅 PAC 模式）──────────────        │
+│ function FindProxyForURL(url, host) {           │
+│   return "PROXY 127.0.0.1:%mixed-port%;        │
+│           DIRECT;";                             │
+│ }                                               │
+│                                                │
+│ ── Windows 专属 ────────────────────────        │
+│ [打开 UWP 回环解锁工具]                         │
+│                                                │
+└────────────────────────────────────────────────┘
+```
+
+#### 8.2.3 平台默认绕过列表
+
+| 平台    | 默认绕过                                                         |
+| ------- | ---------------------------------------------------------------- |
+| Windows | `localhost`, `127.*`, `192.168.*`, `10.*`, `172.16.*`–`172.31.*` |
+| macOS   | `127.0.0.1`, `192.168.0.0/16`, `10.0.0.0/8`, `172.16.0.0/12`, `localhost`, `*.local`, `*.crashlytics.com` |
+
+#### 8.2.4 PAC 模式实现
+
+- 启用 PAC 模式时，在本地启动 HTTP 服务器托管 PAC 脚本
+- 端口从 10000 起自动扫描可用端口
+- 系统代理设置为 PAC URL：`http://127.0.0.1:{pac_port}/proxy.pac`
+- 支持 `%mixed-port%` 占位符，自动替换为 mihomo 的 mixed-port
+
+#### 8.2.5 存储
+
+SysProxyConfig 作为 AppSettings 的子字段存储在 SQLite settings 表中，JSON 序列化。
+
+### 8.3 TUN 虚拟网卡（独立页面 `/tun`，P1）
 
 **目标**：通过虚拟网卡接管系统所有网络流量。
 
-**技术方案设计：**
+#### 8.3.1 数据模型
+
+```rust
+pub struct TunConfig {
+    pub enable: bool,
+    pub stack: TunStack,            // Mixed | System | Gvisor
+    pub device: String,             // macOS: "utun1500", Windows: "Mihomo"
+    pub dns_hijack: Vec<String>,    // 默认 ["any:53"]
+    pub auto_route: bool,           // 默认 true
+    pub auto_detect_interface: bool, // 默认 true
+    pub strict_route: bool,         // 默认 false
+    pub mtu: u32,                   // 默认 1500
+    pub route_exclude_address: Vec<String>,
+}
+
+pub enum TunStack {
+    Mixed,   // 混合模式（推荐）
+    System,  // 系统网络栈
+    Gvisor,  // 用户态网络栈
+}
+```
+
+#### 8.3.2 页面 UI
 
 ```
-应用程序流量
-  │
-  ▼
-TUN 虚拟网卡 (mihomo 创建)
-  │
-  ▼
-mihomo 代理处理
-  │
-  ├─ 匹配规则 → 代理节点
-  └─ 不匹配 → 直连
+┌────────────────────────────────────────────────┐
+│ TUN 虚拟网卡                                    │
+├────────────────────────────────────────────────┤
+│                                                │
+│ TUN 模式           [━━━ OFF ━━]                 │
+│                                                │
+│ 网络栈 Stack       [Mixed] [System] [Gvisor]    │
+│ 设备名称           [utun1500         ]          │
+│ MTU                [1500             ]          │
+│                                                │
+│ ── 路由设置 ────────────────────────────        │
+│ Auto Route         [━━━ ON ━━━]                 │
+│ Strict Route       [━━━ OFF ━━]                 │
+│ Auto Detect Interface [━━━ ON ━━━]              │
+│                                                │
+│ ── DNS ────────────────────────────────         │
+│ DNS Hijack         [any:53           ]          │
+│                                                │
+│ ── 路由排除地址 ───────────────────────         │
+│ （每行一个 CIDR）                                │
+│ [                                    ]          │
+│                                                │
+│ ── 权限管理 ───────────────────────────         │
+│ [授权内核] [重置防火墙规则(Win)]                 │
+│                                                │
+└────────────────────────────────────────────────┘
 ```
 
-**实现要点：**
-- 在 mihomo 配置中启用 TUN 部分
-- **Windows**：需要管理员权限，安装 WinTUN 驱动
-- **macOS**：需要 root 权限
-- 需要权限提升引导 UI（提示用户授权）
-- 通过修改生成的 mihomo 配置来启用 TUN
+#### 8.3.3 权限处理
 
-**配置生成：**
+| 平台    | 权限需求                           | 操作                                          |
+| ------- | ---------------------------------- | --------------------------------------------- |
+| Windows | 管理员权限                         | 提示用户以管理员模式重启应用                  |
+| macOS   | `chown root` + `chmod +s` 内核二进制 | 调用 osascript 请求密码后执行 chmod           |
+
+**权限检测流程：**
+
+```
+TUN 开关 ON
+  │
+  ├─ 检测权限 → 有权限 → 写入 TUN 配置 → 重启内核
+  │
+  └─ 无权限 → 弹出权限提升对话框
+       ├─ 用户确认 → 执行授权 → 重试
+       └─ 用户取消 → TUN 保持 OFF
+```
+
+**运行时权限丢失检测：**
+mihomo 输出 `configure tun interface: operation not permitted` 时，自动关闭 TUN 并通知前端。
+
+#### 8.3.4 mihomo 配置生成
+
+TUN 配置写入 mihomo 最终配置文件：
+
 ```yaml
 tun:
   enable: true
-  stack: system  # 或 gvisor
+  stack: mixed
+  device: utun1500
   dns-hijack:
     - any:53
   auto-route: true
   auto-detect-interface: true
+  strict-route: false
+  mtu: 1500
+  route-exclude-address: []
 ```
+
+#### 8.3.5 存储
+
+TunConfig 作为独立的 JSON 存储在 SQLite settings 表中（key: `tun_config`）。
+
+### 8.4 外部资源管理（独立页面 `/resources`，P1）
+
+**目标**：统一管理 mihomo 依赖的外部数据文件和订阅源。
+
+#### 8.4.1 页面结构
+
+页面分为三个区域：
+
+```
+┌────────────────────────────────────────────────────┐
+│ 外部资源                                  [全部更新] │
+├────────────────────────────────────────────────────┤
+│                                                    │
+│ ── 地理数据 ───────────────────────────────────    │
+│ ┌────────────┐ ┌────────────┐ ┌────────────┐      │
+│ │ GeoIP      │ │ GeoSite    │ │ ASN        │      │
+│ │ mmdb/dat   │ │ dat        │ │ mmdb       │      │
+│ │ 更新: 2h前 │ │ 更新: 2h前 │ │ 更新: 1d前 │      │
+│ │    [🔄] [⚙] │ │    [🔄] [⚙] │ │    [🔄] [⚙] │      │
+│ └────────────┘ └────────────┘ └────────────┘      │
+│                                                    │
+│ Geodata 模式    [dat] [mmdb]                       │
+│ 自动更新        [━━━ OFF ━━]   间隔 [24] 小时      │
+│                                                    │
+│ ── Proxy Provider（代理订阅源）─────────────────   │
+│ ┌──────────────────────────────────────────────┐  │
+│ │ 订阅名称    │ 类型  │ 节点数 │ 更新时间 │ [🔄]  │  │
+│ │ my-airport  │ HTTP  │ 42     │ 2h前     │      │  │
+│ │ backup      │ File  │ 15     │ 1d前     │      │  │
+│ └──────────────────────────────────────────────┘  │
+│                                                    │
+│ ── Rule Provider（规则订阅源）──────────────────   │
+│ ┌──────────────────────────────────────────────┐  │
+│ │ 名称        │ 行为    │ 规则数 │ 更新时间 │ [🔄] │  │
+│ │ reject      │ domain  │ 2340   │ 2h前     │     │  │
+│ │ direct      │ domain  │ 156    │ 2h前     │     │  │
+│ │ proxy       │ domain  │ 892    │ 2h前     │     │  │
+│ └──────────────────────────────────────────────┘  │
+│                                                    │
+└────────────────────────────────────────────────────┘
+```
+
+#### 8.4.2 地理数据配置
+
+```rust
+pub struct GeoConfig {
+    pub geodata_mode: bool,     // false=mmdb, true=dat
+    pub geo_auto_update: bool,
+    pub geo_update_interval: u32, // 小时，默认 24
+    pub geox_url: GeoxUrl,
+}
+
+pub struct GeoxUrl {
+    pub geoip: String,    // geoip.dat 下载 URL
+    pub geosite: String,  // geosite.dat 下载 URL
+    pub mmdb: String,     // country.mmdb / geoip.metadb 下载 URL
+    pub asn: String,      // GeoLite2-ASN.mmdb 下载 URL
+}
+```
+
+**默认 URL（MetaCubeX 官方源）：**
+
+| 资源    | 默认 URL                                                                                |
+| ------- | --------------------------------------------------------------------------------------- |
+| geoip   | `https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip-lite.dat`  |
+| geosite | `https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geosite.dat`     |
+| mmdb    | `https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/geoip.metadb`    |
+| asn     | `https://github.com/MetaCubeX/meta-rules-dat/releases/download/latest/GeoLite2-ASN.mmdb` |
+
+#### 8.4.3 mihomo API 交互
+
+| 操作               | API                              | 说明                         |
+| ------------------ | -------------------------------- | ---------------------------- |
+| 更新地理数据       | `POST /configs/geo`              | mihomo 重新下载所有 geo 数据 |
+| 获取 Proxy Provider| `GET /providers/proxies`         | 获取代理订阅源列表           |
+| 刷新 Proxy Provider| `PUT /providers/proxies/{name}`  | 重新拉取指定代理订阅         |
+| 获取 Rule Provider | `GET /providers/rules`           | 获取规则订阅源列表           |
+| 刷新 Rule Provider | `PUT /providers/rules/{name}`    | 重新拉取指定规则订阅         |
+
+#### 8.4.4 存储
+
+- GeoConfig 存储在 SQLite settings 表（key: `geo_config`）
+- 地理数据文件存储在 `~/.config/clash-kite/data/` 目录
+- Provider 数据由 mihomo 管理，无需额外存储
 
 ### 8.3 开机自启（P1）
 

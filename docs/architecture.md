@@ -63,7 +63,7 @@
 
 | 组成         | 技术             | 职责                       |
 | ------------ | ---------------- | -------------------------- |
-| 页面组件     | React 19         | 4 个路由页面               |
+| 页面组件     | React 19         | 11 个路由页面              |
 | UI 基础组件  | Radix UI + shadcn/ui | Button/Card/Dialog 等  |
 | 路由         | react-router-dom | BrowserRouter, 嵌套路由    |
 | 样式         | Tailwind CSS     | 原子化 CSS，darkMode: class |
@@ -380,7 +380,13 @@ clash-kite/
 │   │   ├── Dashboard.tsx           # 仪表盘
 │   │   ├── Nodes.tsx               # 节点列表
 │   │   ├── Profiles.tsx            # 配置管理
-│   │   └── Settings.tsx            # 设置
+│   │   ├── Logs.tsx                # 日志
+│   │   ├── Connections.tsx         # 连接管理
+│   │   ├── SysProxy.tsx            # 系统代理设置
+│   │   ├── Tun.tsx                 # TUN 虚拟网卡
+│   │   ├── Resources.tsx           # 外部资源管理
+│   │   ├── Kernel.tsx              # 内核设置
+│   │   └── Settings.tsx            # 应用设置
 │   └── locales/
 │       ├── zh.json                 # 中文翻译
 │       └── en.json                 # 英文翻译
