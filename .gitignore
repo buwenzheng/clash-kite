@@ -26,3 +26,6 @@ src-tauri/resources/files/
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code local settings (machine-specific permissions)
+.claude/
