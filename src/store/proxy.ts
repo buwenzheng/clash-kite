@@ -11,6 +11,7 @@ import * as api from "@/api";
 interface ProxyState {
   status: ProxyStatus | null;
   groups: ProxyGroup[];
+  traffic: TrafficData;
   loading: boolean;
   error: string | null;
 
@@ -29,6 +30,7 @@ interface ProxyState {
 export const useProxyStore = create<ProxyState>((set, get) => ({
   status: null,
   groups: [],
+  traffic: { up: 0, down: 0 },
   loading: false,
   error: null,
 
@@ -127,7 +129,9 @@ export const useProxyStore = create<ProxyState>((set, get) => ({
 
   fetchTraffic: async () => {
     try {
-      return await api.getTraffic();
+      const traffic = await api.getTraffic();
+      set({ traffic });
+      return traffic;
     } catch {
       return null;
     }

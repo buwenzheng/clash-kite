@@ -16,6 +16,7 @@
   "nav": {
     "dashboard": "仪表盘",
     "logs": "日志",
+    "connections": "连接",
     "nodes": "节点",
     "profiles": "配置",
     "settings": "设置"
@@ -138,7 +139,14 @@
     "version": "版本",
     "basedOn": "基于",
     "license": "许可证",
-    "checkUpdates": "检查更新"
+    "checkUpdates": "检查更新",
+    "kernelPorts": "内核端口",
+    "kernelPortsDesc": "配置 mihomo 监听端口。更改将在下次启动代理时生效。",
+    "httpPort": "HTTP 端口",
+    "socksPort": "SOCKS5 端口",
+    "mixedPort": "混合端口",
+    "portSaved": "端口设置已保存，重启代理后生效。",
+    "portSaveFailed": "保存端口设置失败"
   },
   "logs": {
     "title": "日志",
@@ -154,5 +162,30 @@
     "autoScroll": "自动滚动",
     "clear": "清空",
     "noData": "暂无日志"
+  },
+  "connections": {
+    "title": "连接管理",
+    "tabActive": "活跃",
+    "tabClosed": "已关闭",
+    "searchPlaceholder": "搜索连接...",
+    "sort": "排序",
+    "sortDefault": "默认",
+    "sortTraffic": "按流量",
+    "sortDuration": "按时间",
+    "protocol": "协议",
+    "dst": "目标地址",
+    "src": "源地址",
+    "proxy": "代理节点",
+    "upload": "上传",
+    "download": "下载",
+    "duration": "持续时间",
+    "close": "关闭",
+    "closeConfirm": "关闭此连接？",
+    "closeConfirmDesc": "确定要关闭该连接吗？",
+    "closeAll": "关闭全部",
+    "closeAllConfirm": "关闭所有连接？",
+    "closeAllConfirmDesc": "确定要关闭所有活跃连接吗？此操作无法撤销。",
+    "noData": "暂无连接",
+    "proxyNotRunning": "代理未运行，请先在仪表盘启动代理。"
   }
 }

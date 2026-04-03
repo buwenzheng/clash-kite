@@ -70,6 +70,23 @@ export interface AutoUpdateResult {
   updatedAt: string;
 }
 
+// Connection types — matches Rust models::connections
+
+export type ConnectionState = "active" | "closed";
+
+export interface ConnectionItem {
+  id: string;
+  src: string;
+  dst: string;
+  protocol: string;
+  chains: string[];
+  proxy: string;
+  uploadBytes: number;
+  downloadBytes: number;
+  duration: number;
+  state: ConnectionState;
+}
+
 // Settings types — matches Rust models::settings
 
 export interface AppSettings {
@@ -80,4 +97,11 @@ export interface AppSettings {
   startMinimized: boolean;
   systemProxy: boolean;
   tunMode: boolean;
+}
+
+// Kernel types — matches Rust models::kernel
+export interface KernelSettings {
+  mixedPort: number; // default 7890
+  httpPort: number;  // default 7892
+  socksPort: number; // default 7891
 }

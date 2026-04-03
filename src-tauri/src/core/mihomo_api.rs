@@ -3,6 +3,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::models::connections::{ConnectionItem, ConnectionsResponse};
 use crate::models::proxy::{DelayHistory, ProxyGroup, ProxyNode, TrafficData};
 
 pub struct MihomoApi {
@@ -200,7 +201,7 @@ impl MihomoApi {
             .await?;
         Ok(MihomoConfigs {
             mode: resp.get("mode").and_then(|v| v.as_str()).unwrap_or("rule").to_string(),
-            port: resp.get("port").and_then(|v| v.as_u64()).unwrap_or(0) as u16,
+            port: resp.get("http-port").and_then(|v| v.as_u64()).unwrap_or(0) as u16,
             socks_port: resp.get("socks-port").and_then(|v| v.as_u64()).unwrap_or(0) as u16,
             mixed_port: resp.get("mixed-port").and_then(|v| v.as_u64()).unwrap_or(0) as u16,
         })
@@ -230,6 +231,36 @@ impl MihomoApi {
             up: resp.get("up").and_then(|v| v.as_u64()).unwrap_or(0),
             down: resp.get("down").and_then(|v| v.as_u64()).unwrap_or(0),
         })
+    }
+
+    /// Fetch all active connections from mihomo GET /connections
+    pub async fn get_connections(&self) -> Result<Vec<ConnectionItem>> {
+        let raw: serde_json::Value = self
+            .client
+            .get(format!("{}/connections", self.base))
+            .send()
+            .await?
+            .json()
+            .await?;
+        let resp: ConnectionsResponse = serde_json::from_value(raw)?;
+        Ok(resp.into())
+    }
+
+    /// Close a single connection by ID via DELETE /connections/:id
+    pub async fn close_connection(&self, id: &str) -> Result<()> {
+        let url = format!("{}/connections/{}", self.base, urlencoding::encode(id));
+        self.client.delete(&url).send().await?.error_for_status()?;
+        Ok(())
+    }
+
+    /// Close all connections via DELETE /connections
+    pub async fn close_all_connections(&self) -> Result<()> {
+        self.client
+            .delete(format!("{}/connections", self.base))
+            .send()
+            .await?
+            .error_for_status()?;
+        Ok(())
     }
 
 }

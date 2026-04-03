@@ -16,6 +16,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "logs": "Logs",
+    "connections": "Connections",
     "nodes": "Nodes",
     "profiles": "Profiles",
     "settings": "Settings"
@@ -138,7 +139,14 @@
     "version": "Version",
     "basedOn": "Based on",
     "license": "License",
-    "checkUpdates": "Check for Updates"
+    "checkUpdates": "Check for Updates",
+    "kernelPorts": "Kernel Ports",
+    "kernelPortsDesc": "Configure mihomo listening ports. Changes take effect on next proxy start.",
+    "httpPort": "HTTP Port",
+    "socksPort": "SOCKS5 Port",
+    "mixedPort": "Mixed Port",
+    "portSaved": "Port settings saved. Restart proxy to apply.",
+    "portSaveFailed": "Failed to save port settings"
   },
   "logs": {
     "title": "Logs",
@@ -154,5 +162,30 @@
     "autoScroll": "Auto-scroll",
     "clear": "Clear",
     "noData": "No logs available"
+  },
+  "connections": {
+    "title": "Connections",
+    "tabActive": "Active",
+    "tabClosed": "Closed",
+    "searchPlaceholder": "Search connections...",
+    "sort": "Sort",
+    "sortDefault": "Default",
+    "sortTraffic": "By traffic",
+    "sortDuration": "By duration",
+    "protocol": "Protocol",
+    "dst": "Destination",
+    "src": "Source",
+    "proxy": "Proxy",
+    "upload": "Upload",
+    "download": "Download",
+    "duration": "Duration",
+    "close": "Close",
+    "closeConfirm": "Close this connection?",
+    "closeConfirmDesc": "Are you sure you want to close this connection?",
+    "closeAll": "Close All",
+    "closeAllConfirm": "Close all connections?",
+    "closeAllConfirmDesc": "This will close all active connections. This action cannot be undone.",
+    "noData": "No connections",
+    "proxyNotRunning": "Proxy is not running. Start the proxy from Dashboard first."
   }
 }

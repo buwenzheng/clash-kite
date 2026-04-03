@@ -4,6 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { Layout } from "@/components/Layout";
 import Dashboard from "@/pages/Dashboard";
 import Logs from "@/pages/Logs";
+import Connections from "@/pages/Connections";
 import Nodes from "@/pages/Nodes";
 import Profiles from "@/pages/Profiles";
 import Settings from "@/pages/Settings";
@@ -30,6 +31,7 @@ function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="logs" element={<Logs />} />
+          <Route path="connections" element={<Connections />} />
           <Route path="nodes" element={<Nodes />} />
           <Route path="profiles" element={<Profiles />} />
           <Route path="settings" element={<Settings />} />

@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import type {
+  ConnectionItem,
   ProxyStatus,
   ProxyGroup,
   DelayResult,
@@ -8,6 +9,7 @@ import type {
   ProfileInfo,
   AutoUpdateResult,
   AppSettings,
+  KernelSettings,
 } from "../types";
 
 // ==================== Proxy ====================
@@ -86,6 +88,23 @@ export const readProfileContent = (id: string) =>
 export const saveProfileContent = (id: string, content: string) =>
   invoke<void>("save_profile_content", { id, content });
 
+// ==================== Connections ====================
+
+export const getConnectionsSnapshot = (mode?: string) =>
+  invoke<ConnectionItem[]>("get_connections_snapshot", { mode });
+
+export const closeConnection = (id: string) =>
+  invoke<void>("close_connection", { id });
+
+export const closeAllConnections = () =>
+  invoke<void>("close_all_connections");
+
+export const startConnectionsStream = () =>
+  invoke<void>("start_connections_stream");
+
+export const stopConnectionsStream = () =>
+  invoke<void>("stop_connections_stream");
+
 // ==================== Settings ====================
 
 export const getSettings = () =>
@@ -93,6 +112,14 @@ export const getSettings = () =>
 
 export const saveSettings = (settings: AppSettings) =>
   invoke<void>("save_settings", { settings });
+
+// ==================== Kernel ====================
+
+export const getKernelSettings = () =>
+  invoke<KernelSettings>("get_kernel_settings");
+
+export const saveKernelSettings = (settings: KernelSettings) =>
+  invoke<void>("save_kernel_settings", { settings });
 
 // ==================== File Dialogs ====================
 

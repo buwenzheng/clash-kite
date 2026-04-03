@@ -1,11 +1,12 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useEffect, useCallback, useState, useRef } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import {
   LayoutDashboard,
   Globe,
   FileCode,
   FileText,
+  Network,
   Settings,
   Power,
   Wifi,
@@ -18,7 +19,6 @@ import {
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { useProxyStore, useProfileStore } from "@/store";
-import type { TrafficData } from "@/types";
 
 function formatSpeed(bytes: number): string {
   if (bytes === 0) return "0 B/s";
@@ -30,10 +30,9 @@ function formatSpeed(bytes: number): string {
 
 export function Layout() {
   const { t } = useTranslation();
-  const { status, toggleProxy, fetchStatus, setSystemProxy, fetchTraffic } =
+  const { status, toggleProxy, fetchStatus, setSystemProxy, fetchTraffic, traffic } =
     useProxyStore();
   const { profiles, fetchProfiles } = useProfileStore();
-  const [traffic, setTraffic] = useState<TrafficData>({ up: 0, down: 0 });
   const intervalRef = useRef<number | null>(null);
 
   const isRunning = status?.running ?? false;
@@ -46,13 +45,11 @@ export function Layout() {
 
   const pollTraffic = useCallback(async () => {
     if (!status?.running) return;
-    const data = await fetchTraffic();
-    if (data) setTraffic(data);
+    await fetchTraffic();
   }, [status?.running, fetchTraffic]);
 
   useEffect(() => {
     if (!isRunning) {
-      setTraffic({ up: 0, down: 0 });
       if (intervalRef.current) clearInterval(intervalRef.current);
       return;
     }
@@ -72,6 +69,7 @@ export function Layout() {
   const navItems = [
     { path: "/", icon: LayoutDashboard, label: t("nav.dashboard") },
     { path: "/logs", icon: FileText, label: t("nav.logs") },
+    { path: "/connections", icon: Network, label: t("nav.connections") },
     { path: "/nodes", icon: Globe, label: t("nav.nodes") },
     { path: "/profiles", icon: FileCode, label: t("nav.profiles") },
     { path: "/settings", icon: Settings, label: t("nav.settings") },

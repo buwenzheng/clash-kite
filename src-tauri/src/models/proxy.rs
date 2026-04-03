@@ -77,9 +77,9 @@ impl Default for ProxyStatus {
         Self {
             running: false,
             mode: ProxyMode::Rule,
-            http_port: 7890,
+            http_port: 7892,
             socks_port: 7891,
-            mixed_port: 7892,
+            mixed_port: 7890,
             active_profile: None,
             system_proxy: false,
         }

@@ -1,20 +1,37 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Moon, Sun, Monitor, Globe, Shield, Info } from "lucide-react";
+import { Moon, Sun, Monitor, Globe, Shield, Info, Network } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useSettingsStore, useProxyStore } from "@/store";
+import { useSettingsStore, useProxyStore, useKernelStore } from "@/store";
 import { cn } from "@/lib/utils";
 
 export default function Settings() {
   const { t, i18n } = useTranslation();
   const { settings, fetchSettings, updateSettings } = useSettingsStore();
   const { status, setSystemProxy } = useProxyStore();
+  const { settings: kernelSettings, loading: kernelLoading, saving: kernelSaving, fetchSettings: fetchKernel, saveSettings: saveKernel } = useKernelStore();
+
+  const [portMsg, setPortMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [localPorts, setLocalPorts] = useState({ mixedPort: 7890, httpPort: 7892, socksPort: 7891 });
 
   useEffect(() => {
     fetchSettings();
-  }, [fetchSettings]);
+    fetchKernel();
+  }, [fetchSettings, fetchKernel]);
+
+  useEffect(() => {
+    if (kernelSettings) {
+      setLocalPorts({
+        mixedPort: kernelSettings.mixedPort,
+        httpPort: kernelSettings.httpPort,
+        socksPort: kernelSettings.socksPort,
+      });
+    }
+  }, [kernelSettings]);
 
   if (!settings) return null;
 
@@ -185,6 +202,100 @@ export default function Settings() {
                 onCheckedChange={handleSystemProxy}
                 disabled={!status?.running}
               />
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      {/* Kernel Ports */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2 px-1">
+          <Network className="h-4 w-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold">
+            {t("settings.kernelPorts")}
+          </h2>
+        </div>
+        <Card>
+          <CardContent className="p-4 space-y-4">
+            <p className="text-xs text-muted-foreground">
+              {t("settings.kernelPortsDesc")}
+            </p>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t("settings.mixedPort")}
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={65535}
+                  value={localPorts.mixedPort}
+                  onChange={(e) =>
+                    setLocalPorts((p) => ({ ...p, mixedPort: Number(e.target.value) }))
+                  }
+                  disabled={kernelSaving}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t("settings.httpPort")}
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={65535}
+                  value={localPorts.httpPort}
+                  onChange={(e) =>
+                    setLocalPorts((p) => ({ ...p, httpPort: Number(e.target.value) }))
+                  }
+                  disabled={kernelSaving}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  {t("settings.socksPort")}
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={65535}
+                  value={localPorts.socksPort}
+                  onChange={(e) =>
+                    setLocalPorts((p) => ({ ...p, socksPort: Number(e.target.value) }))
+                  }
+                  disabled={kernelSaving}
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                size="sm"
+                onClick={async () => {
+                  const ok = await saveKernel({
+                    mixedPort: localPorts.mixedPort,
+                    httpPort: localPorts.httpPort,
+                    socksPort: localPorts.socksPort,
+                  });
+                  setPortMsg({
+                    type: ok ? "success" : "error",
+                    text: ok ? t("settings.portSaved") : t("settings.portSaveFailed"),
+                  });
+                  setTimeout(() => setPortMsg(null), 3000);
+                }}
+                disabled={kernelSaving || kernelLoading}
+              >
+                {kernelSaving ? t("common.loading") : t("common.save")}
+              </Button>
+              {portMsg && (
+                <span
+                  className={cn(
+                    "text-xs",
+                    portMsg.type === "success" ? "text-green-500" : "text-red-500"
+                  )}
+                >
+                  {portMsg.text}
+                </span>
+              )}
             </div>
           </CardContent>
         </Card>

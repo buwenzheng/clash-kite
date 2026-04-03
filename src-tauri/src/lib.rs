@@ -6,7 +6,7 @@ mod commands;
 
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
 
 use tauri::{
     menu::{Menu, MenuItem},
@@ -120,7 +120,8 @@ pub fn run() {
                 config_dir.clone(),
             ));
             let profile_svc = services::profile::ProfileService::new(config_dir.clone(), db.clone());
-            let proxy_svc = services::proxy::ProxyService::new(mihomo.clone());
+            let kernel_svc = Arc::new(services::kernel::KernelService::new(db.clone()));
+            let proxy_svc = services::proxy::ProxyService::new(mihomo.clone(), kernel_svc.clone());
             let settings_svc = services::settings::SettingsService::new(db.clone());
 
             // Clone services for the auto-update scheduler before moving into managed state
@@ -130,8 +131,12 @@ pub fn run() {
 
             app.manage(mihomo.clone());
             app.manage(profile_svc);
+            app.manage(kernel_svc);
             app.manage(proxy_svc);
             app.manage(settings_svc);
+            app.manage(Arc::new(RwLock::new(
+                commands::connections::ConnectionsStreamState::default(),
+            )));
 
             // Start background auto-update scheduler
             core::scheduler::AutoUpdateScheduler::start(
@@ -182,6 +187,15 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            // Kernel
+            commands::kernel::get_kernel_settings,
+            commands::kernel::save_kernel_settings,
+            // Connections
+            commands::connections::start_connections_stream,
+            commands::connections::stop_connections_stream,
+            commands::connections::get_connections_snapshot,
+            commands::connections::close_connection,
+            commands::connections::close_all_connections,
             // Proxy
             commands::proxy::get_proxy_status,
             commands::proxy::start_proxy,

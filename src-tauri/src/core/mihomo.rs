@@ -3,9 +3,13 @@ use std::path::PathBuf;
 use std::process::Child;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
+
+use crate::models::kernel::KernelSettings;
 
 use super::mihomo_api::MihomoApi;
+
+const MERGED_CONFIG_NAME: &str = "config-merged.yaml";
 
 pub struct MihomoManager {
     binary_path: PathBuf,
@@ -30,7 +34,11 @@ impl MihomoManager {
         &self.api
     }
 
-    pub async fn start(&self, config_path: &str) -> Result<()> {
+    pub async fn start(
+        &self,
+        config_path: &str,
+        kernel_settings: &KernelSettings,
+    ) -> Result<()> {
         let mut guard = self.child.lock().await;
 
         if let Some(mut child) = guard.take() {
@@ -38,12 +46,20 @@ impl MihomoManager {
             let _ = child.wait();
         }
 
+        // Merge user config with kernel port settings
+        let merged_config_path = self.data_dir.as_ref()
+            .unwrap_or(&self.log_path.parent().unwrap().to_path_buf())
+            .join(MERGED_CONFIG_NAME);
+        drop(guard);
+        self.merge_config(config_path, kernel_settings, &merged_config_path)?;
+        let mut guard = self.child.lock().await;
+
         let log_file = fs::File::create(&self.log_path)
             .with_context(|| format!("Failed to create mihomo log at {:?}", self.log_path))?;
         let log_stderr = log_file.try_clone()?;
 
         let mut cmd = std::process::Command::new(&self.binary_path);
-        cmd.arg("-f").arg(config_path);
+        cmd.arg("-f").arg(&merged_config_path);
         cmd.arg("-ext-ctl").arg("127.0.0.1:9090");
 
         if let Some(ref dir) = self.data_dir {
@@ -197,6 +213,44 @@ impl MihomoManager {
 
         let start = filtered.len().saturating_sub(lines);
         filtered[start..].join("\n")
+    }
+
+    /// Parse user's YAML config as JSON Value, inject port keys, serialize back to YAML,
+    /// and write to the merged config file. This preserves the original YAML structure
+    /// (including `http-port` kebab-case keys) since serde_json Value is schema-agnostic.
+    fn merge_config(
+        &self,
+        user_config_path: &str,
+        kernel_settings: &KernelSettings,
+        merged_path: &PathBuf,
+    ) -> Result<()> {
+        let user_yaml = fs::read_to_string(user_config_path)
+            .with_context(|| format!("Failed to read config from {}", user_config_path))?;
+
+        // Parse YAML into a generic JSON Value (preserves keys as-is)
+        let mut value: serde_json::Value = serde_yaml::from_str(&user_yaml)
+            .with_context(|| format!("Failed to parse YAML from {}", user_config_path))?;
+
+        // Inject port fields into the config object
+        let obj = value.as_object_mut().context("Config root must be a mapping")?;
+        obj.insert("mixed-port".to_string(), kernel_settings.mixed_port.into());
+        obj.insert("http-port".to_string(), kernel_settings.http_port.into());
+        obj.insert("socks-port".to_string(), kernel_settings.socks_port.into());
+
+        // Serialize back to YAML and write
+        let merged_yaml = serde_yaml::to_string(&value)
+            .context("Failed to serialize merged config to YAML")?;
+        fs::write(merged_path, &merged_yaml)
+            .with_context(|| format!("Failed to write merged config to {:?}", merged_path))?;
+
+        log::info!(
+            "Merged config written to {:?} with ports: http={}, socks={}, mixed={}",
+            merged_path,
+            kernel_settings.http_port,
+            kernel_settings.socks_port,
+            kernel_settings.mixed_port
+        );
+        Ok(())
     }
 
     async fn wait_ready(&self, max_seconds: u32) -> Result<()> {

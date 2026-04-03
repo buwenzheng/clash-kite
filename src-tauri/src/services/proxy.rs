@@ -5,17 +5,20 @@ use anyhow::Result;
 use crate::core::mihomo::MihomoManager;
 use crate::core::sysproxy;
 use crate::models::proxy::*;
+use crate::services::kernel::KernelService;
 
 #[derive(Clone)]
 pub struct ProxyService {
     mihomo: Arc<MihomoManager>,
+    kernel_svc: Arc<KernelService>,
     status: Arc<RwLock<ProxyStatus>>,
 }
 
 impl ProxyService {
-    pub fn new(mihomo: Arc<MihomoManager>) -> Self {
+    pub fn new(mihomo: Arc<MihomoManager>, kernel_svc: Arc<KernelService>) -> Self {
         Self {
             mihomo,
+            kernel_svc,
             status: Arc::new(RwLock::new(ProxyStatus::default())),
         }
     }
@@ -25,7 +28,8 @@ impl ProxyService {
     }
 
     pub async fn start(&self, config_path: &str, profile_name: &str) -> Result<()> {
-        self.mihomo.start(config_path).await?;
+        let kernel_settings = self.kernel_svc.get_settings().await;
+        self.mihomo.start(config_path, &kernel_settings).await?;
 
         // Read actual config from mihomo API to get real ports and mode
         let configs = self.mihomo.api().get_configs().await?;
@@ -34,9 +38,9 @@ impl ProxyService {
         status.running = true;
         status.mode = ProxyMode::from_str(&configs.mode);
         status.active_profile = Some(profile_name.to_string());
-        status.http_port = configs.port;
-        status.socks_port = configs.socks_port;
-        status.mixed_port = configs.mixed_port;
+        status.http_port = if configs.port > 0 { configs.port } else { 7892 };
+        status.socks_port = if configs.socks_port > 0 { configs.socks_port } else { 7891 };
+        status.mixed_port = if configs.mixed_port > 0 { configs.mixed_port } else { 7890 };
 
         log::info!(
             "Proxy started: mode={}, http={}, socks={}, mixed={}",
