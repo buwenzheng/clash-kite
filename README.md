@@ -43,7 +43,9 @@
 
 ### 核心
 
-- **ClashMeta** - 代理内核（计划集成）
+- **ClashMeta** - 内置 mihomo 内核
+
+> **范围说明**：本项目定位为**轻量、够用**的 mihomo 桌面客户端，**不做** SmartCore、Sub-Store、双内核、Overrides 覆写、WebDAV 同步等差异化集成。详细见 [SPEC.md §0](./SPEC.md)。
 
 ## 项目结构
 
@@ -60,7 +62,15 @@ clash-kite/
 │   │   ├── Dashboard.tsx         # 仪表盘
 │   │   ├── Nodes.tsx             # 节点管理
 │   │   ├── Profiles.tsx          # 配置管理
-│   │   └── Settings.tsx          # 设置
+│   │   ├── Connections.tsx       # 连接管理
+│   │   ├── Logs.tsx              # 日志
+│   │   ├── Settings.tsx          # 设置
+│   │   ├── SysProxy.tsx          # 系统代理（计划中）
+│   │   ├── Tun.tsx               # TUN 模式（计划中）
+│   │   ├── Dns.tsx               # DNS 配置（计划中）
+│   │   ├── Sniffer.tsx           # 域名嗅探（计划中）
+│   │   ├── Resources.tsx         # 外部资源（计划中）
+│   │   └── Kernel.tsx            # 内核设置（计划中）
 │   ├── store/                    # Zustand 状态
 │   └── types/                    # TypeScript 类型
 ├── src-tauri/                    # Rust 后端
@@ -137,32 +147,40 @@ npm run tauri build
 
 ## 页面说明
 
-### 仪表盘 (Dashboard)
+### P0 已完成
 
-- 代理开关
-- 实时状态显示
-- 流量统计
-- 端口配置
+**仪表盘 (Dashboard)**
+- 代理开关、实时状态、流量统计、端口配置
 
-### 节点 (Nodes)
+**节点 (Nodes)**
+- 节点分组、延迟测试、节点选择、搜索
 
-- 节点分组列表
-- 延迟测试
-- 节点选择
-- 搜索功能
+**配置 (Profiles)**
+- 订阅导入、配置管理、配置切换、YAML 编辑
 
-### 配置 (Profiles)
+**连接 (Connections)**
+- 活跃/已关闭 Tab、关闭单条/全部、搜索排序
 
-- 订阅导入
-- 配置管理
-- 配置切换
+**日志 (Logs)**
+- 实时日志、级别过滤、关键字搜索
 
-### 设置 (Settings)
+**设置 (Settings)**
+- 主题、语言、开机自启、系统代理开关、托盘选项
 
-- 主题选择（浅色/深色/跟随系统）
-- 语言设置（中文/英文）
-- 开机自启
-- 系统代理设置
+### P1 计划中
+
+- SysProxy 高级（手动 / PAC / bypass）
+- TUN 模式（需管理员权限）
+- DNS 配置（fake-ip / redir-host）
+- Sniffer 域名嗅探
+- Resources（GeoIP / Provider 刷新）
+- Kernel（端口 / logLevel / 内核版本管理）
+
+### P2 计划中
+
+- Rules 查看页
+- 全局快捷键
+- 配置目录备份/迁移
 
 ## 配置文件
 
@@ -188,23 +206,53 @@ npm run tauri build
 ## 致谢
 
 - [FlClash](https://github.com/chen08209/FlClash) - 灵感来源和参考
+- [clash-party](https://github.com/mihomo-party-org/clash-party) - 参考产品（非功能对标）
 - [Tauri](https://tauri.app) - 桌面应用框架
 - [Shadcn/ui](https://ui.shadcn.com) - UI 组件库
 - [ClashMeta](https://github.com/MetaCubeX/mihomo) - 代理内核
 
 ## 路线图
 
-- [x] ClashMeta 内核集成（进程管理 + API客户端）
-- [x] 配置文件导入/导出（本地文件 + 订阅）
-- [ ] 系统代理配置
-- [ ] TUN 模式支持
-- [ ] WebDAV 同步
+### 已完成
+- [x] mihomo 内核集成（进程管理 + API 客户端）
+- [x] 订阅配置导入/导出（本地文件 + 订阅）
+- [x] 节点测速（TCP 连接测试）
 - [x] 多语言支持（中文、英文）
 - [x] 系统托盘功能
-- [x] 节点测速（TCP连接测试）
-- [ ] 二维码扫描
-- [ ] 流量统计
-- [ ] 规则编辑器
+- [x] 连接管理（活跃/已关闭、关闭单条/全部）
+- [x] 日志查看（轮询模式）
+
+### v0.3.0 — P1 mihomo 高级配置
+- [ ] SysProxy 高级配置（手动 / PAC / bypass）
+- [ ] TUN 模式
+- [ ] DNS 配置（fake-ip / redir-host）
+- [ ] Sniffer 域名嗅探
+- [ ] Resources 页（GeoIP 更新、Provider 刷新）
+- [ ] Kernel 页（端口、logLevel、外控、内核版本管理）
+
+### v0.4.0 — P1 体验增强
+- [ ] 实时日志流（WebSocket）
+- [ ] 托盘菜单增强（动态生成模式/配置/代理组）
+- [ ] 订阅自动更新调度器
+- [ ] 二维码导入订阅
+- [ ] 开机自启
+- [ ] 工作目录配置与迁移
+
+### v0.5.0 — P2 页面与轻量增强
+- [ ] Rules 查看页（启用/禁用）
+- [ ] 全局快捷键
+- [ ] 配置目录备份/迁移（压缩包）
+
+### 显式不做（范围外）
+- ❌ SmartCore / AI 节点选择
+- ❌ Sub-Store 集成
+- ❌ 双内核（Smart 内核 + Mihomo）
+- ❌ TUN 免服务模式
+- ❌ Overrides 覆写系统（YAML/JS）
+- ❌ WebDAV 备份/恢复
+- ❌ 应用自动更新
+- ❌ 多配色主题（仅深浅）
+- ❌ MetaCubeXd Dashboard 内置
 
 ## 联系方式
 

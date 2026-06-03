@@ -25,11 +25,15 @@
 - [日志模块（logs-module）](./logs-module.md)
 - [连接模块（connections-module）](./connections-module.md)
 - [内核设置模块（kernel-module）](./kernel-module.md)
-- [规则与覆写模块（rules-module）](./rules-module.md)
+- [规则查看模块（rules-module）](./rules-module.md)
+
+> **项目范围说明**（v0.2.0 起）：本项目不做 SmartCore、Sub-Store、双内核、Overrides 覆写、WebDAV 同步、应用自动更新、多主题、免服务 TUN。详见 [SPEC.md §0](../SPEC.md)。
 
 ## 快速链接
 
 - [GitHub 仓库](https://github.com/buwenzheng/clash-kite)
+- [产品规约 SPEC.md](../SPEC.md)
+- [开发计划 PLAN.md](../PLAN.md)
 - [问题反馈](https://github.com/buwenzheng/clash-kite/issues)
 
 ## 文档贡献

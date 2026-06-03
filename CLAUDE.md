@@ -2,9 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 项目范围
+
+Clash-Kite 定位为**轻量、够用**的 mihomo 桌面客户端。**不做** SmartCore、Sub-Store、双内核、Overrides 覆写、WebDAV 同步、应用自动更新、多配色主题、免服务 TUN。详见 [SPEC.md §0](./SPEC.md)。
+
 ## 规范文档
 
 - [SPEC.md](./SPEC.md) — **产品规格文档**（功能定义、页面规格、任务看板）
+- [PLAN.md](./PLAN.md) — **开发计划**（阶段划分、任务排序）
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — **技术架构文档**（设计决策、技术约定）
 - [PRD.md](./PRD.md) — 历史产品文档（参考，已被 SPEC.md 取代）
 
@@ -42,9 +47,14 @@ React Component
 | MihomoManager | `src-tauri/src/core/mihomo.rs` | mihomo process lifecycle (start/stop/restart) |
 | MihomoApi | `src-tauri/src/core/mihomo_api.rs` | REST API client (GET/PUT/PATCH http://127.0.0.1:9090) |
 | sysproxy | `src-tauri/src/core/sysproxy.rs` | System proxy (Windows: winreg, macOS: networksetup) |
+| AutoUpdateScheduler | `src-tauri/src/core/scheduler.rs` | Subscription auto-update (tokio::spawn) |
 | ProxyService | `src-tauri/src/services/proxy.rs` | Proxy state, mode, traffic |
 | ProfileService | `src-tauri/src/services/profile.rs` | Config CRUD, subscription import |
 | SettingsService | `src-tauri/src/services/settings.rs` | Key-value settings in SQLite |
+| ConnectionsService | `src-tauri/src/services/connections.rs` | Active/closed connections, close single/all |
+| KernelService | `src-tauri/src/services/kernel.rs` | Kernel params + version management (planned expansion) |
+
+> **P1 计划增加**（见 PLAN.md Phase 1）：SysProxyService / TunService / DnsService / SnifferService / ResourcesService。
 
 ### Configuration Storage
 
@@ -70,12 +80,18 @@ Services are injected via `app.manage()` and accessed in commands via `State<'_,
 
 ### Frontend State
 
-Three Zustand stores in `src/store/`:
+Five Zustand stores in `src/store/`:
 - `proxy.ts` — `useProxyStore`: status, groups, toggleProxy, selectProxy, testDelay
 - `config.ts` — `useProfileStore`: profiles, import/activate/delete
 - `settings.ts` — `useSettingsStore`: theme, language, systemProxy
+- `connections.ts` — `useConnectionsStore`: active/closed, close, search
+- `kernel.ts` — `useKernelStore`: kernel settings + version info (planned expansion)
+
+> **P1 计划增加**（见 PLAN.md Phase 1）：sysproxy / tun / dns / sniffer / resources store。
 
 ### Adding New Features
+
+**Important**: Before adding a new feature, verify it's within the project scope (see [SPEC.md §0](./SPEC.md#0-范围声明v020-起生效)). Features outside the scope (e.g., SmartCore, Sub-Store, Overrides, WebDAV) **must not be implemented**.
 
 **Backend (Rust):**
 1. Create model in `src-tauri/src/models/` with `#[derive(Serialize, Deserialize)]`
@@ -124,3 +140,4 @@ Using shadcn/ui + Radix UI primitives. Base components in `src/components/ui/`. 
 - mihomo REST API docs: https://wiki.metacubex.one/api/
 - mihomo runs as sidecar; dev mode binary at `src-tauri/resources/sidecar/mihomo.exe`
 - prepare script (`scripts/prepare.mjs`) auto-downloads mihomo binary and GeoIP data on `npm install`
+- **Don't add**: SmartCore / Sub-Store / dual kernel / Overrides / WebDAV / app auto-update (out of scope)

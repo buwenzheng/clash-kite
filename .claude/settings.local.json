@@ -4,7 +4,30 @@
       "Bash(find /d/Project/ost/clash-kite -type f \\\\\\( -iname \"*prd*\" -o -iname \"*requirements*\" -o -iname \"*spec*\" \\\\\\) 2>/dev/null | head -20)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(cargo check:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(curl -s http://127.0.0.1:9090/connections)",
+      "Bash(tasklist)",
+      "Bash(python3 -m json.tool)",
+      "Bash(netstat -ano)",
+      "WebFetch(domain:wiki.metacubex.one)",
+      "Bash(curl -v http://127.0.0.1:9090/connections)",
+      "Bash(taskkill //F //PID 51856)",
+      "Bash(taskkill //F //PID 78460)",
+      "Bash(taskkill //F //PID 16928)",
+      "Bash(python3 -c ':*)",
+      "Bash(cargo build:*)",
+      "Bash(cargo clean:*)",
+      "Bash(taskkill //F //PID 69552)",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(taskkill //F //IM \"clash-kite-app.exe\")",
+      "Bash(cargo test:*)",
+      "Bash(python3 -c \" import json, sys data = json.load\\(sys.stdin\\) conn = data['connections'][0] print\\(json.dumps\\({ 'id': conn['id'], 'upload': conn['upload'], 'download': conn['download'], 'start': conn.get\\('start'\\), 'metadata.type': conn['metadata'].get\\('type'\\) }, indent=2\\)\\) \")",
+      "Bash(node -e ':*)",
+      "Bash(taskkill //F //PID 71964)",
+      "Bash(taskkill //F //PID 60244)"
     ]
   }
 }

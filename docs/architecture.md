@@ -1,5 +1,7 @@
 # Clash-Kite 架构设计文档
 
+> **项目范围**（与 SPEC.md §0 对齐）：本项目**不做** SmartCore、Sub-Store、双内核、Overrides 覆写、WebDAV 同步、应用自动更新、多配色主题、免服务 TUN。本文档只描述范围内能力。
+
 ## 1. 系统架构总览
 
 ```
@@ -108,8 +110,14 @@ Rust 侧的 `#[tauri::command]` 函数。职责：
 | ProxyService     | MihomoManager        | 代理状态管理、模式切换、节点操作   |
 | ProfileService   | SQLite Connection    | 配置 CRUD、订阅下载、YAML 校验    |
 | SettingsService  | SQLite Connection    | 设置键值对读写                     |
-| RulesService     | MihomoApi            | 规则查看、Rule Provider（计划中）  |
-| OverrideService  | SQLite + 文件系统     | 覆写 CRUD、配置合并引擎（计划中）  |
+| ConnectionsService | MihomoApi          | 活跃/已关闭连接、关闭单条/全部     |
+| KernelService    | MihomoManager + fs   | 内核参数、版本管理、二进制下载     |
+| SysProxyService  | sysproxy             | 系统代理高级配置（手动/PAC）        |
+| TunService       | MihomoManager        | TUN 配置与热重载                    |
+| DnsService       | MihomoManager        | DNS 配置与热重载                    |
+| SnifferService   | MihomoManager        | Sniffer 配置与热重载                |
+| ResourcesService | MihomoApi + reqwest  | GeoIP / Proxy Provider / Rule Provider |
+| AutoUpdateScheduler（后台）| ProfileService | 订阅定时更新（tokio::spawn） |
 
 ### 2.6 Core Layer
 
@@ -118,8 +126,7 @@ Rust 侧的 `#[tauri::command]` 函数。职责：
 | MihomoManager       | `mihomo.rs`       | mihomo 进程生命周期管理                  |
 | MihomoApi           | `mihomo_api.rs`   | mihomo RESTful API 客户端                |
 | sysproxy            | `sysproxy.rs`     | 跨平台系统代理设置                       |
-| AutoUpdateScheduler | `scheduler.rs`    | 订阅自动更新后台调度器（计划中）         |
-| OverrideEngine      | `override_engine.rs` | YAML deep_merge + JS 执行引擎（计划中） |
+| AutoUpdateScheduler | `scheduler.rs`    | 订阅自动更新后台调度器                   |
 
 ### 2.7 Data Layer
 
@@ -223,36 +230,9 @@ CREATE TABLE IF NOT EXISTS settings (
 | start_minimized  | bool    | false    | 启动时最小化 |
 | system_proxy     | bool    | false    | 系统代理     |
 | tun_mode         | bool    | false    | TUN 模式     |
+| work_dir         | string  | 默认     | 工作目录     |
 
-#### overrides 表（计划中 — P2）
-
-```sql
-CREATE TABLE IF NOT EXISTS overrides (
-    id          TEXT PRIMARY KEY,
-    name        TEXT NOT NULL,
-    type        TEXT NOT NULL DEFAULT 'local',
-    ext         TEXT NOT NULL DEFAULT 'yaml',
-    url         TEXT,
-    file_path   TEXT NOT NULL,
-    global      INTEGER NOT NULL DEFAULT 0,
-    enabled     INTEGER NOT NULL DEFAULT 1,
-    sort_order  INTEGER NOT NULL DEFAULT 0,
-    updated_at  TEXT NOT NULL
-);
-```
-
-#### profile_overrides 表（计划中 — P2）
-
-```sql
-CREATE TABLE IF NOT EXISTS profile_overrides (
-    profile_id  TEXT NOT NULL,
-    override_id TEXT NOT NULL,
-    sort_order  INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (profile_id, override_id),
-    FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE,
-    FOREIGN KEY (override_id) REFERENCES overrides(id) ON DELETE CASCADE
-);
-```
+**P1 配置存读**：SysProxy / TUN / DNS / Sniffer / Kernel / Resources 高级配置统一存 `settings` 表，key 命名 `{module}_{field}`（如 `tun_stack`、`dns_enhanced_mode`），存读逻辑走通用 `ConfigService<T>`（见 PLAN.md Phase 1）。
 
 ### 4.3 文件存储
 
@@ -262,12 +242,8 @@ CREATE TABLE IF NOT EXISTS profile_overrides (
 | `~/.config/clash-kite/data.db`      | SQLite 数据库           |
 | `~/.config/clash-kite/profiles/`    | 配置文件目录            |
 | `~/.config/clash-kite/profiles/{uuid}.yaml` | 单个配置文件   |
-| `~/.config/clash-kite/overrides/`           | 覆写文件目录（计划中） |
-| `~/.config/clash-kite/overrides/{uuid}.yaml` | YAML 覆写文件（计划中）|
-| `~/.config/clash-kite/overrides/{uuid}.js`   | JS 覆写文件（计划中）  |
-| `~/.config/clash-kite/overrides/{uuid}.log`  | JS 执行日志（计划中）  |
 | `~/.config/clash-kite/data/`        | mihomo 运行时数据目录   |
-| `~/.config/clash-kite/data/config.yaml`    | 最终生成配置（计划中）|
+| `~/.config/clash-kite/data/config.yaml`    | 最终生成配置        |
 | `~/.config/clash-kite/data/country.mmdb` | GeoIP 数据        |
 | `~/.config/clash-kite/data/geoip.dat`    | GeoIP 数据        |
 | `~/.config/clash-kite/data/geosite.dat`  | GeoSite 数据      |
@@ -319,7 +295,7 @@ Layout 组件 mount
     → setTraffic(data)  (React useState)
 ```
 
-### 5.4 后台调度流（计划中）
+### 5.4 后台调度流
 
 ```
 AutoUpdateScheduler (tokio::spawn, 应用启动时创建)
@@ -340,12 +316,19 @@ clash-kite/
 ├── PRD.md                          # 产品需求文档（概览）
 ├── docs/                           # 详细设计文档
 │   ├── architecture.md             # 本文档
+│   ├── api-reference.md            # API 接口参考
 │   ├── proxy-module.md             # 代理模块设计
 │   ├── profile-module.md           # 配置管理模块设计
 │   ├── settings-module.md          # 设置与系统集成设计
 │   ├── dns-module.md               # DNS 配置模块设计
 │   ├── sniffer-module.md           # 域名嗅探模块设计
-│   └── api-reference.md            # API 接口参考
+│   ├── tun-module.md               # TUN 模块设计
+│   ├── sysproxy-module.md          # 系统代理模块设计
+│   ├── resources-module.md         # 外部资源模块设计
+│   ├── connections-module.md       # 连接管理模块设计
+│   ├── kernel-module.md            # 内核设置模块设计
+│   ├── logs-module.md              # 日志模块设计
+│   └── rules-module.md             # 规则查看模块设计
 │
 ├── src/                            # 前端源码
 │   ├── main.tsx                    # 入口
@@ -354,7 +337,7 @@ clash-kite/
 │   ├── globals.css                 # 全局样式 + 主题变量
 │   ├── vite-env.d.ts               # Vite 类型声明
 │   ├── api/
-│   │   └── index.ts                # Tauri IPC 封装（30+ 函数）
+│   │   └── index.ts                # Tauri IPC 封装
 │   ├── types/
 │   │   └── index.ts                # TypeScript 类型定义
 │   ├── lib/
@@ -363,34 +346,26 @@ clash-kite/
 │   │   ├── index.ts                # Store 统一导出
 │   │   ├── proxy.ts                # useProxyStore
 │   │   ├── config.ts               # useProfileStore
-│   │   └── settings.ts             # useSettingsStore
+│   │   ├── settings.ts             # useSettingsStore
+│   │   ├── connections.ts          # useConnectionsStore
+│   │   └── kernel.ts               # useKernelStore
 │   ├── components/
 │   │   ├── Layout.tsx              # 侧边栏 + 代理开关 + 流量 + 路由 Outlet
 │   │   └── ui/                     # shadcn/ui 基础组件
-│   │       ├── button.tsx
-│   │       ├── card.tsx
-│   │       ├── input.tsx
-│   │       ├── textarea.tsx
-│   │       ├── badge.tsx
-│   │       ├── switch.tsx
-│   │       ├── tabs.tsx
-│   │       ├── scroll-area.tsx
-│   │       ├── label.tsx
-│   │       ├── dialog.tsx
-│   │       └── alert-dialog.tsx
 │   ├── pages/
-│   │   ├── Dashboard.tsx           # 仪表盘
-│   │   ├── Nodes.tsx               # 节点列表
-│   │   ├── Profiles.tsx            # 配置管理
-│   │   ├── Logs.tsx                # 日志
-│   │   ├── Connections.tsx         # 连接管理
-│   │   ├── SysProxy.tsx            # 系统代理设置
-│   │   ├── Tun.tsx                 # TUN 虚拟网卡
-│   │   ├── Dns.tsx                 # DNS 配置
-│   │   ├── Sniffer.tsx             # 域名嗅探配置
-│   │   ├── Resources.tsx           # 外部资源管理
-│   │   ├── Kernel.tsx              # 内核设置（含版本管理、进程优先级）
-│   │   └── Settings.tsx            # 应用设置（含工作目录、Dashboard）
+│   │   ├── Dashboard.tsx           # 仪表盘 ✅
+│   │   ├── Nodes.tsx               # 节点列表 ✅
+│   │   ├── Profiles.tsx            # 配置管理 ✅
+│   │   ├── Logs.tsx                # 日志 ✅
+│   │   ├── Connections.tsx         # 连接管理 ✅
+│   │   ├── Settings.tsx            # 应用设置 ✅
+│   │   ├── SysProxy.tsx            # 系统代理（计划中）
+│   │   ├── Tun.tsx                 # TUN 虚拟网卡（计划中）
+│   │   ├── Dns.tsx                 # DNS 配置（计划中）
+│   │   ├── Sniffer.tsx             # 域名嗅探配置（计划中）
+│   │   ├── Resources.tsx           # 外部资源管理（计划中）
+│   │   ├── Kernel.tsx              # 内核设置（计划中）
+│   │   └── Rules.tsx               # 规则查看（计划中）
 │   └── locales/
 │       ├── zh.json                 # 中文翻译
 │       └── en.json                 # 英文翻译
@@ -412,28 +387,28 @@ clash-kite/
 │       │   ├── proxy.rs            # 代理命令（11 个）
 │       │   ├── profile.rs          # 配置命令（13 个）
 │       │   ├── settings.rs         # 设置命令（2 个）
-│       │   ├── rules.rs            # 规则命令（计划中）
-│       │   └── overrides.rs        # 覆写命令（计划中）
+│       │   ├── connections.rs      # 连接命令（5 个）
+│       │   └── kernel.rs           # 内核命令（计划扩展至 8 个）
 │       ├── services/
 │       │   ├── mod.rs
 │       │   ├── proxy.rs            # ProxyService
 │       │   ├── profile.rs          # ProfileService
 │       │   ├── settings.rs         # SettingsService
-│       │   ├── rules.rs            # RulesService（计划中）
-│       │   └── overrides.rs        # OverrideService（计划中）
+│       │   ├── connections.rs      # ConnectionsService
+│       │   └── kernel.rs           # KernelService
 │       ├── models/
 │       │   ├── mod.rs
-│       │   ├── proxy.rs            # ProxyStatus, ProxyGroup, ProxyNode, ProxyMode 等
+│       │   ├── proxy.rs            # ProxyStatus, ProxyGroup, ProxyNode, ProxyMode
 │       │   ├── profile.rs          # ProfileInfo, ProfileSource
 │       │   ├── settings.rs         # AppSettings
-│       │   ├── rules.rs            # RuleItem, RuleProvider（计划中）
-│       │   └── overrides.rs        # OverrideItem（计划中）
+│       │   ├── connections.rs      # ConnectionItem
+│       │   └── kernel.rs           # KernelSettings, CoreVersionInfo
 │       ├── core/
 │       │   ├── mod.rs
 │       │   ├── mihomo.rs           # MihomoManager（进程管理）
 │       │   ├── mihomo_api.rs       # MihomoApi（HTTP API 客户端）
 │       │   ├── sysproxy.rs         # 系统代理（Win/macOS/fallback）
-│       │   └── scheduler.rs        # AutoUpdateScheduler（计划中）
+│       │   └── scheduler.rs        # AutoUpdateScheduler
 │       └── db/
 │           └── mod.rs              # SQLite 初始化 + 迁移
 │
@@ -504,12 +479,14 @@ main.rs → lib.rs run()
   │   ├→ MihomoManager::new(binary_path, data_dir, config_dir)
   │   ├→ ProfileService::new(config_dir, db)
   │   ├→ ProxyService::new(mihomo)
-  │   └→ SettingsService::new(db)
+  │   ├→ SettingsService::new(db)
+  │   ├→ ConnectionsService::new(mihomo)
+  │   └→ KernelService::new(mihomo, app_handle)
   ├→ app.manage() 注入所有服务
   ├→ 创建系统托盘（Show/Hide/Toggle Proxy/Quit）
-  ├→ 启动 AutoUpdateScheduler（后台订阅自动更新，计划中）
+  ├→ 启动 AutoUpdateScheduler（订阅自动更新）
   ├→ 窗口关闭事件：隐藏窗口而非退出
-  └→ 注册 26 个 Tauri Command
+  └→ 注册 Tauri Command（v0.2.0 31 个；v0.3.0 起扩展）
 ```
 
 ### 7.5 prepare 脚本

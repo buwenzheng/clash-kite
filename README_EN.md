@@ -43,7 +43,9 @@ English | [中文](./README.md)
 
 ### Core
 
-- **ClashMeta** - Proxy kernel (planned integration)
+- **ClashMeta** - Built-in mihomo kernel
+
+> **Scope note**: This project is positioned as a **lightweight, sufficient** mihomo desktop client. We **do not** implement SmartCore, Sub-Store, dual kernel, Overrides, WebDAV sync, or other differentiating integrations. See [SPEC.md §0](./SPEC.md).
 
 ## Project Structure
 
@@ -60,7 +62,15 @@ clash-kite/
 │   │   ├── Dashboard.tsx         # Main dashboard
 │   │   ├── Nodes.tsx             # Node management
 │   │   ├── Profiles.tsx          # Configuration
-│   │   └── Settings.tsx          # Settings
+│   │   ├── Connections.tsx       # Connection management
+│   │   ├── Logs.tsx              # Logs
+│   │   ├── Settings.tsx          # Settings
+│   │   ├── SysProxy.tsx          # System proxy (planned)
+│   │   ├── Tun.tsx               # TUN mode (planned)
+│   │   ├── Dns.tsx               # DNS configuration (planned)
+│   │   ├── Sniffer.tsx           # Domain sniffing (planned)
+│   │   ├── Resources.tsx         # External resources (planned)
+│   │   └── Kernel.tsx            # Kernel settings (planned)
 │   ├── store/                    # Zustand stores
 │   └── types/                    # TypeScript types
 ├── src-tauri/                    # Rust backend
@@ -137,32 +147,40 @@ npm run tauri build
 
 ## Pages
 
-### Dashboard
+### P0 Completed
 
-- Proxy toggle switch
-- Real-time status display
-- Traffic statistics
-- Port configuration
+**Dashboard**
+- Proxy toggle, real-time status, traffic stats, port config
 
-### Nodes
+**Nodes**
+- Node groups, latency testing, node selection, search
 
-- Node list with groups
-- Latency testing
-- Node selection
-- Search functionality
+**Profiles**
+- Subscription import, config management, profile switching, YAML editor
 
-### Profiles
+**Connections**
+- Active/closed tabs, close single/all, search and sort
 
-- Subscription import
-- Configuration management
-- Profile switching
+**Logs**
+- Real-time logs, level filter, keyword search
 
-### Settings
+**Settings**
+- Theme, language, auto-start, system proxy toggle, tray options
 
-- Theme selection (Light/Dark/System)
-- Language settings (English/Chinese)
-- Auto-start configuration
-- System proxy settings
+### P1 Planned
+
+- SysProxy advanced (manual / PAC / bypass)
+- TUN mode (requires admin)
+- DNS configuration (fake-ip / redir-host)
+- Sniffer domain sniffing
+- Resources (GeoIP / Provider refresh)
+- Kernel (ports / logLevel / version management)
+
+### P2 Planned
+
+- Rules view page
+- Global shortcuts
+- Config directory backup/migration
 
 ## Configuration
 
@@ -188,23 +206,53 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 
 - [FlClash](https://github.com/chen08209/FlClash) - Inspiration and reference
+- [clash-party](https://github.com/mihomo-party-org/clash-party) - Product reference (not feature-for-feature)
 - [Tauri](https://tauri.app) - Desktop framework
 - [Shadcn/ui](https://ui.shadcn.com) - UI components
 - [ClashMeta](https://github.com/MetaCubeX/mihomo) - Proxy kernel
 
 ## Roadmap
 
-- [x] ClashMeta kernel integration (process management + API client)
+### Completed
+- [x] mihomo kernel integration (process management + API client)
 - [x] Configuration import/export (local files + subscriptions)
-- [ ] System proxy configuration
-- [ ] TUN mode support
-- [ ] WebDAV sync
-- [x] Multi-language support (English, Chinese)
-- [x] System tray functionality
 - [x] Node latency testing (TCP connection)
-- [ ] QR code scanning
-- [ ] Traffic statistics
-- [ ] Rule editor
+- [x] Multi-language (English, Chinese)
+- [x] System tray
+- [x] Connections management (active/closed, close single/all)
+- [x] Logs view (polling)
+
+### v0.3.0 — P1 mihomo advanced configuration
+- [ ] SysProxy advanced (manual / PAC / bypass)
+- [ ] TUN mode
+- [ ] DNS configuration (fake-ip / redir-host)
+- [ ] Sniffer domain sniffing
+- [ ] Resources page (GeoIP update, Provider refresh)
+- [ ] Kernel page (ports, logLevel, external controller, kernel version management)
+
+### v0.4.0 — P1 experience enhancements
+- [ ] Real-time log stream (WebSocket)
+- [ ] Tray menu enhancement (dynamic mode/profile/proxy group)
+- [ ] Subscription auto-update scheduler
+- [ ] QR code import
+- [ ] Auto-start on boot
+- [ ] Working directory configuration & migration
+
+### v0.5.0 — P2 pages & lightweight enhancements
+- [ ] Rules view (enable/disable)
+- [ ] Global shortcuts
+- [ ] Config directory backup/migration (zip)
+
+### Explicitly Out of Scope
+- ❌ SmartCore / AI node selection
+- ❌ Sub-Store integration
+- ❌ Dual kernel (Smart + Mihomo)
+- ❌ TUN service-less mode
+- ❌ Overrides system (YAML/JS)
+- ❌ WebDAV backup/restore
+- ❌ Application auto-update
+- ❌ Multiple color themes (light/dark only)
+- ❌ MetaCubeXd Dashboard integration
 
 ## Contact
 
